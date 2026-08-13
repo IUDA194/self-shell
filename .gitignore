@@ -5,6 +5,8 @@ fish_variables*
 .DS_Store
 .codex
 .codegraph
+__pycache__/
+*.pyc
 
 # Editor/plugin caches
 .local/

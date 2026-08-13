@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -u
+
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+
+engine="$HOME/Documents/Wallpapers/linux-wallpaperengine/build/output/linux-wallpaperengine"
+assets="$HOME/Games/steamapps/common/wallpaper_engine/assets"
+project="$HOME/Games/steamapps/workshop/content/431960/3237672440"
+
+# Preserve the original Wallpaper Engine setup when its local assets exist.
+if [[ -x "$engine" && -d "$assets" && -d "$project" ]]; then
+  "$HOME/.config/hypr/start-wallpaperengine.sh" && exit 0
+fi
+
+if ! command -v awww-daemon >/dev/null 2>&1 || ! command -v awww >/dev/null 2>&1; then
+  command -v hyprpaper >/dev/null 2>&1 && exec hyprpaper
+  exit 1
+fi
+
+if ! awww query >/dev/null 2>&1; then
+  awww-daemon >/dev/null 2>&1 &
+  for _ in {1..30}; do
+    awww query >/dev/null 2>&1 && break
+    sleep 0.1
+  done
+fi
+
+awww restore >/dev/null 2>&1 && exit 0
+exec awww img "$HOME/.local/share/self-shell/wallpapers/wallpeper.jpg" \
+  --transition-type fade --transition-duration 1.2

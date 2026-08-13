@@ -1,0 +1,74 @@
+* {
+    bg:                  rgba(38, 32, 29, 100%);
+    bg-alt:              rgba(55, 45, 41, 100%);
+    bg-selected:         rgba(79, 68, 62, 100%);
+    fg:                  rgba(221, 211, 198, 100%);
+    fg-muted:            rgba(154, 139, 128, 100%);
+    border:              rgba(117, 96, 84, 100%);
+    accent:              rgba(181, 142, 102, 100%);
+
+    background-color:    transparent;
+    text-color:          @fg;
+    font:                "JetBrainsMono Nerd Font 13";
+}
+
+window {
+    location:            center;
+    anchor:              center;
+    width:               88%;
+    height:              78%;
+    padding:             8px;
+    background-color:    @bg;
+    border:              1px;
+    border-color:        @border;
+    border-radius:       18px;
+}
+
+mainbox {
+    children:            [ "listview" ];
+}
+
+listview {
+    columns:             3;
+    lines:               200;
+    layout:              vertical;
+    cycle:               true;
+    dynamic:             false;
+    fixed-height:        false;
+    spacing:             4px;
+    scrollbar:           false;
+}
+
+element {
+    orientation:         vertical;
+    children:            [ "element-icon", "element-text" ];
+    padding:             3px;
+    margin:              0;
+    spacing:             0;
+    background-color:    @bg-alt;
+    border:              1px;
+    border-color:        transparent;
+    border-radius:       10px;
+}
+
+element normal.normal {
+    background-color:    @bg-alt;
+    text-color:          @fg;
+}
+
+element selected.normal {
+    background-color:    @bg-selected;
+    border-color:        @accent;
+    text-color:          @fg;
+}
+
+element-icon {
+    size:                400px;
+    background-color:    transparent;
+    horizontal-align:    0.5;
+    vertical-align:      0.5;
+}
+
+element-text {
+    enabled:             false;
+}

@@ -1,73 +1,69 @@
 # self-shell
 
-Переносимое терминальное окружение: Fish + Tide, Kitty, tmux, Neovim,
-Fastfetch, btop и панель Quickshell для Hyprland.
+Полностью переносимое окружение для Hyprland: весь Quickshell (панель,
+уведомления, launcher, dashboard, clipboard, password picker и выбор обоев),
+Fish + Tide, tmux, Kitty, Neovim, Fastfetch, btop и `awww`.
 
-## Установка
+## Установка одной командой
 
-```bash
-git clone https://github.com/IUDA194/self-shell.git ~/self-shell
-cd ~/self-shell
-./install.sh
-```
-
-Установщик создаёт симлинки в домашнем каталоге. Существующие файлы не
-удаляются: они перемещаются в
-`~/.local/state/self-shell/backups/<дата-время>/`. Скрипт можно безопасно
-запускать повторно.
-
-Для установки без сетевого обновления Fisher и загрузки TPM:
+На Fedora 43+ или Arch Linux:
 
 ```bash
-SELF_SHELL_OFFLINE=1 ./install.sh
+bash -c 'set -e; if ! command -v git >/dev/null; then if command -v dnf >/dev/null; then sudo dnf install -y git; elif command -v pacman >/dev/null; then sudo pacman -S --needed --noconfirm git; else echo "Нужен Git" >&2; exit 1; fi; fi; dir="$HOME/self-shell"; if [[ -d "$dir/.git" ]]; then git -C "$dir" pull --ff-only; else git clone https://github.com/IUDA194/self-shell.git "$dir"; fi; "$dir/install.sh"'
 ```
 
-## Зависимости
+Установщик по умолчанию:
 
-Основные: `fish`, `git`, `curl`, `tmux`, `kitty`, `neovim`, `fastfetch`,
-`btop`, `zoxide`, `wl-clipboard`, Nerd Font (в Kitty настроен
-`JetBrainsMono Nerd Font Mono`). Для Neovim также полезны `ripgrep`, `fd`,
-`lazygit`, компилятор C и языковые инструменты, которые используются в
-конкретных проектах.
+- ставит системные зависимости через DNF или pacman;
+- на Fedora собирает `awww` 0.12.1 из официального репозитория Codeberg;
+- ставит `mpvpaper`, чтобы wallpaper picker работал и с видео;
+- устанавливает JetBrainsMono Nerd Font, Fisher, Fish-плагины и TPM-плагины;
+- создаёт Python-окружение для Google Calendar в dashboard;
+- подключает все конфиги симлинками и сохраняет заменённые файлы в backup;
+- делает Fish login-shell. Интерактивный Fish автоматически открывает или
+  создаёт tmux-сессию `main`;
+- при старте Hyprland запускает обои через `awww`, всю панель Quickshell,
+  launcher, уведомления, dashboard и clipboard watcher.
 
-Для панели Quickshell нужны `quickshell`, `hyprland`, `jq`, `curl`, `sqlite3`,
-`NetworkManager` (`nmcli`), `rofi`, `libnotify` и V2RayA для VPN-индикатора.
-Панель запускается командой:
+После установки выберите сессию Hyprland в дисплейном менеджере и откройте
+Kitty. Если сессия уже запущена, перелогиньтесь, чтобы применился новый
+login-shell.
+
+## Режимы установки
+
+Не устанавливать системные пакеты, но подключить конфиги:
 
 ```bash
-~/.config/quickshell/start.sh
+SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 ```
 
-После первого запуска Fish установите плагины, если Fisher ещё не был
-установлен:
+Не менять login-shell:
 
 ```bash
-fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source; fisher update"
+SELF_SHELL_SKIP_CHSH=1 ./install.sh
 ```
 
-Чтобы сделать Fish login-shell:
+Не загружать Fisher/TPM и Python-пакеты:
 
 ```bash
-command -v fish | sudo tee -a /etc/shells
-chsh -s "$(command -v fish)"
+SELF_SHELL_OFFLINE=1 SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 ```
 
-Перед добавлением строки в `/etc/shells` проверьте, что такого пути там ещё
-нет.
+## Что переносится
 
-## Обновление репозитория
+- `config/hypr` — полный Hyprland-конфиг и все дополнительные Quickshell
+  экраны/backend-скрипты;
+- `config/quickshell` — панель, центр и toast-уведомления, power menu и
+  сетевые скрипты;
+- `config/tmux` и `home/.tmux.conf` — tmux вместе с автозапуском Fish;
+- `config/waypaper` и `bin/self-shell-wallpaper` — состояние выбора обоев,
+  запуск `awww-daemon` и восстановление последних обоев;
+- остальные каталоги в `config` — терминальное окружение целиком.
 
-Конфиги подключены симлинками, поэтому изменения внутри `~/.config/fish`,
-`~/.config/quickshell` и остальных каталогов сразу видны в репозитории:
+Runtime-кэш `~/.cache/awww` не переносится: он генерируется автоматически и
+может занимать сотни мегабайт. В репозитории есть стартовые обои; свои файлы
+можно положить в `~/Documents/Wallpapers`.
 
-```bash
-cd ~/self-shell
-git status
-git add -A
-git commit -m "update configs"
-git push
-```
-
-`fish_variables`, история, кэши, логи и секреты намеренно не хранятся в Git.
-Путь к картинке для `render_side_by_side.py` можно переопределить переменной
-`FASTFETCH_WALLPAPER`.
+Конфиги подключаются симлинками. Изменения в `~/.config/hypr`,
+`~/.config/quickshell`, `~/.config/tmux` и остальных подключённых каталогах
+сразу видны в репозитории. Повторный запуск установщика безопасен.
