@@ -1,0 +1,166 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+  "logo": {
+    "type": "file",
+    "source": "~/.config/fastfetch/rick-wide.ascii",
+    "color": {
+      "1": "#BA945F"
+    },
+    "padding": {
+      "top": 0,
+      "left": 0,
+      "right": 4
+    },
+    "printRemaining": true,
+    "position": "left"
+  },
+  "display": {
+    "pipe": false,
+    "showErrors": false,
+    "disableLinewrap": false,
+    "hideCursor": false,
+    "separator": ": ",
+    "brightColor": true,
+    "color": {
+      "keys": "#BA945F",
+      "title": "#BA945F",
+      "output": "#CCC2B7",
+      "separator": "#746961"
+    },
+    "key": {
+      "width": 11,
+      "paddingLeft": 0
+    },
+    "percent": {
+      "type": [
+        "num",
+        "num-color"
+      ],
+      "ndigits": 0,
+      "color": {
+        "green": "32",
+        "yellow": "93",
+        "red": "91"
+      },
+      "spaceBeforeUnit": "default",
+      "width": 0
+    }
+  },
+  "general": {
+    "thread": true,
+    "processingTimeout": 5000,
+    "detectVersion": true,
+    "dsForceDrm": false
+  },
+  "modules": [
+    {
+      "type": "title",
+      "key": " ",
+      "keyIcon": "",
+      "color": {
+        "user": "#BA945F",
+        "at": "#746961",
+        "host": "#CCC2B7"
+      }
+    },
+    {
+      "type": "separator",
+      "string": "─",
+      "times": 60,
+      "outputColor": "#746961"
+    },
+    {
+      "type": "os",
+      "keyIcon": ""
+    },
+    {
+      "type": "host",
+      "keyIcon": "󰌢"
+    },
+    {
+      "type": "kernel",
+      "keyIcon": ""
+    },
+    {
+      "type": "uptime",
+      "keyIcon": ""
+    },
+    {
+      "type": "packages",
+      "keyIcon": "󰏖",
+      "disabled": [
+        "winget"
+      ],
+      "combined": false
+    },
+    {
+      "type": "shell",
+      "keyIcon": ""
+    },
+    {
+      "type": "display",
+      "keyIcon": "󰍹",
+      "compactType": "none",
+      "preciseRefreshRate": false
+    },
+    {
+      "type": "wm",
+      "keyIcon": "",
+      "detectPlugin": true
+    },
+    {
+      "type": "theme",
+      "keyIcon": "󰉼"
+    },
+    {
+      "type": "cpu",
+      "keyIcon": "",
+      "temp": false,
+      "showPeCoreCount": false
+    },
+    {
+      "type": "gpu",
+      "keyIcon": "󰾲",
+      "driverSpecific": false,
+      "detectionMethod": "pci",
+      "temp": false,
+      "hideType": "none"
+    },
+    {
+      "type": "memory",
+      "keyIcon": ""
+    },
+    {
+      "type": "swap",
+      "keyIcon": "󰓡",
+      "separate": false
+    },
+    {
+      "type": "disk",
+      "keyIcon": "",
+      "showRegular": true,
+      "showExternal": true,
+      "showHidden": false,
+      "showSubvolumes": false,
+      "showReadOnly": true,
+      "showUnknown": false,
+      "folders": "/"
+    },
+    {
+      "type": "localip",
+      "keyIcon": "󰖩"
+    },
+    {
+      "type": "locale",
+      "keyIcon": "󰌽"
+    },
+    {
+      "type": "break"
+    },
+    {
+      "type": "colors",
+      "paddingLeft": 2,
+      "symbol": "block"
+    }
+  ]
+}

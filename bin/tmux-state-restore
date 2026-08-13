@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -u
+
+state_file="${XDG_STATE_HOME:-$HOME/.local/state}/tmux/sessions.tsv"
+[[ -r "$state_file" ]] || exit 0
+
+declare -A sessions=()
+while IFS=$'\t' read -r session _index window directory; do
+  [[ -n "$session" ]] || continue
+  if [[ -z "${sessions[$session]+x}" ]]; then
+    tmux has-session -t "=$session" 2>/dev/null || \
+      tmux new-session -d -s "$session" -n "$window" -c "$directory"
+    sessions[$session]=1
+  else
+    tmux new-window -d -t "=$session" -n "$window" -c "$directory"
+  fi
+done < "$state_file"

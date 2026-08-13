@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -u
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/tmux"
+state_file="$state_dir/sessions.tsv"
+mkdir -p "$state_dir"
+
+tmp_file="$(mktemp "$state_dir/sessions.XXXXXX")"
+trap 'rm -f "$tmp_file"' EXIT
+
+tmux list-windows -a -F '#{session_name}\t#{window_index}\t#{window_name}\t#{pane_current_path}' \
+  > "$tmp_file" 2>/dev/null || exit 0
+mv "$tmp_file" "$state_file"
+trap - EXIT

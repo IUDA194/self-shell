@@ -1,0 +1,11 @@
+# Runtime and local state
+fish_variables*
+*.log
+*.bak
+.DS_Store
+.codex
+.codegraph
+
+# Editor/plugin caches
+.local/
+.cache/
