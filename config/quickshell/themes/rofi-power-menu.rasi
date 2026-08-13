@@ -1,0 +1,72 @@
+* {
+    bg:                  rgba(38, 32, 29, 94%);
+    bg-alt:              rgba(79, 68, 62, 28%);
+    bg-selected:         rgba(117, 96, 84, 84%);
+    fg:                  rgba(221, 211, 198, 100%);
+    fg-muted:            rgba(154, 139, 128, 100%);
+    border:              rgba(111, 96, 88, 72%);
+    border-strong:       rgba(181, 142, 102, 100%);
+    background-color:    transparent;
+    text-color:          @fg;
+    font:                "Noto Sans 13";
+}
+
+window {
+    width:               300px;
+    location:            center;
+    anchor:              center;
+    padding:             10px;
+    background-color:    @bg;
+    border:              1px;
+    border-color:        @border;
+    border-radius:       10px;
+}
+
+mainbox {
+    spacing:             6px;
+    children:            [ "inputbar", "listview" ];
+}
+
+inputbar {
+    spacing:             12px;
+    padding:             9px 12px;
+    background-color:    transparent;
+    border:              0px;
+    children:            [ "prompt", "entry" ];
+}
+
+prompt {
+    enabled:             true;
+    text-color:          @fg;
+    str:                 "⏻";
+}
+
+entry {
+    placeholder:         "Power";
+    placeholder-color:   @fg-muted;
+    text-color:          @fg;
+    cursor:              text;
+}
+
+listview {
+    lines:               4;
+    columns:             1;
+    fixed-height:        false;
+    scrollbar:           false;
+    layout:              vertical;
+    spacing:             5px;
+}
+
+element {
+    padding:             8px 12px;
+    background-color:    @bg-alt;
+    border:              1px;
+    border-color:        transparent;
+    border-radius:       7px;
+}
+
+element selected.normal {
+    background-color:    @bg-selected;
+    border-color:        @border-strong;
+    text-color:          @fg;
+}

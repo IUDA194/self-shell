@@ -26,7 +26,7 @@ link_path() {
   changed=1
 }
 
-for name in fish kitty tmux nvim fastfetch btop; do
+for name in fish kitty tmux nvim fastfetch btop quickshell; do
   link_path "$repo_dir/config/$name" "$HOME/.config/$name"
 done
 

@@ -1,7 +1,7 @@
 # self-shell
 
 Переносимое терминальное окружение: Fish + Tide, Kitty, tmux, Neovim,
-Fastfetch и btop.
+Fastfetch, btop и панель Quickshell для Hyprland.
 
 ## Установка
 
@@ -30,6 +30,14 @@ SELF_SHELL_OFFLINE=1 ./install.sh
 `lazygit`, компилятор C и языковые инструменты, которые используются в
 конкретных проектах.
 
+Для панели Quickshell нужны `quickshell`, `hyprland`, `jq`, `curl`, `sqlite3`,
+`NetworkManager` (`nmcli`), `rofi`, `libnotify` и V2RayA для VPN-индикатора.
+Панель запускается командой:
+
+```bash
+~/.config/quickshell/start.sh
+```
+
 После первого запуска Fish установите плагины, если Fisher ещё не был
 установлен:
 
@@ -50,7 +58,7 @@ chsh -s "$(command -v fish)"
 ## Обновление репозитория
 
 Конфиги подключены симлинками, поэтому изменения внутри `~/.config/fish`,
-`~/.config/kitty` и остальных каталогов сразу видны в репозитории:
+`~/.config/quickshell` и остальных каталогов сразу видны в репозитории:
 
 ```bash
 cd ~/self-shell
