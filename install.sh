@@ -33,9 +33,10 @@ link_path() {
 install_fedora_packages() {
   local packages=(
     bash btop brightnessctl cargo curl fastfetch fd-find fish fontconfig gcc git
-    grim hyprland hyprlock jq kitty libnotify lz4-devel meson mpv-devel nautilus
+    grim hyprland hyprlock hyprsunset jq kde-connect kitty libnotify lz4-devel meson mpv-devel nautilus
     NetworkManager neovim ninja-build pass plocate playerctl pkgconf-pkg-config
-    python3 python3-pip ripgrep rofi scdoc slurp sqlite tmux wayland-devel
+    python3 python3-pip ripgrep rofi scdoc slurp sqlite tesseract tesseract-langpack-eng
+    tesseract-langpack-rus tmux wayland-devel
     wayland-protocols-devel wf-recorder wireplumber wl-clipboard wtype xdg-utils
     xz zoxide
   )
@@ -48,8 +49,9 @@ install_fedora_packages() {
 install_arch_packages() {
   local packages=(
     awww bash btop brightnessctl curl fastfetch fd fish fontconfig gcc git
-    grim hyprland hyprlock jq kitty libnotify meson mpv nautilus networkmanager
-    neovim ninja pass plocate playerctl python ripgrep rofi slurp sqlite tmux
+    grim hyprland hyprlock hyprsunset jq kdeconnect kitty libnotify meson mpv nautilus networkmanager
+    neovim ninja pass plocate playerctl python ripgrep rofi slurp sqlite tesseract
+    tesseract-data-eng tesseract-data-rus tmux
     wf-recorder wireplumber wl-clipboard wtype xdg-utils xz zoxide quickshell
   )
   sudo pacman -S --needed --noconfirm "${packages[@]}"
@@ -168,12 +170,9 @@ if [[ ! -e "$HOME/Documents/Wallpapers/wallpeper.jpg" ]]; then
 fi
 
 if [[ "${SELF_SHELL_OFFLINE:-0}" != 1 ]]; then
-  log 'Installing Fish and tmux plugins'
-  if ! fish -c 'type -q fisher'; then
-    fish -c 'curl -fsSL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source; fisher install jorgebucaran/fisher'
-  fi
-  fish -c 'fisher update'
-
+  # Fisher and Tide are bundled in config/fish. Running `fisher update` here
+  # would try to overwrite those tracked files through the config symlink.
+  log 'Installing tmux plugins'
   if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
     git clone --depth 1 https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
   fi

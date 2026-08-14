@@ -1,11 +1,10 @@
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
   "logo": {
-    "type": "file",
-    "source": "~/.config/fastfetch/rick-wide.ascii",
-    "color": {
-      "1": "#BA945F"
-    },
+    "type": "kitty-icat",
+    "source": "~/.config/fastfetch/g.png",
+    "width": 34,
+    "height": 30,
     "padding": {
       "top": 0,
       "left": 0,
@@ -28,7 +27,7 @@
       "separator": "#746961"
     },
     "key": {
-      "width": 11,
+      "width": 18,
       "paddingLeft": 0
     },
     "percent": {
@@ -99,7 +98,9 @@
     },
     {
       "type": "display",
+      "key": "Display",
       "keyIcon": "󰍹",
+      "format": "{width}x{height} @ {refresh-rate} Hz",
       "compactType": "none",
       "preciseRefreshRate": false
     },

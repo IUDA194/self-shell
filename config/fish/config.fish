@@ -6,7 +6,9 @@ if status is-interactive
     alias p="pwd"
     alias gp="git push"
     alias z="zoxide"
-    alias rm="rip"
+    if type -q rip
+        alias rm="rip"
+    end
 
     if type -q zoxide
         zoxide init fish | source
@@ -53,3 +55,6 @@ fish_add_path "$HOME/.spicetify"
 
 # kimi-code
 fish_add_path -g "$HOME/.kimi-code/bin"
+
+# pass
+set -gx PASSWORD_STORE_DIR "$HOME/.pass/passwords"
