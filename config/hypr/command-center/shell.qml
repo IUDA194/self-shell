@@ -353,12 +353,43 @@ ShellRoot {
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 10
             }
-            MouseArea {
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
-                cursorShape: Qt.PointingHandCursor
-                onClicked: if (mixerRow.node && mixerRow.node.audio) mixerRow.node.audio.muted = !mixerRow.node.audio.muted
-                Text { anchors.centerIn: parent; text: "󰍶"; color: root.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 14 }
+            Rectangle {
+                id: muteButton
+                readonly property bool muted: mixerRow.node && mixerRow.node.audio
+                    ? mixerRow.node.audio.muted : false
+                Layout.preferredWidth: 34
+                Layout.preferredHeight: 34
+                radius: 11
+                color: muted
+                    ? (muteMouse.containsMouse ? Qt.alpha(root.critical, 0.30) : Qt.alpha(root.critical, 0.20))
+                    : (muteMouse.containsMouse ? root.surfaceAlt : "transparent")
+                border.width: 1
+                border.color: muted
+                    ? Qt.alpha(root.critical, 0.85)
+                    : (muteMouse.containsMouse ? root.accent : theme.outline)
+
+                Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: muteButton.muted ? "󰖁" : "󰕾"
+                    color: muteButton.muted ? root.critical : (muteMouse.containsMouse ? root.accent : root.foreground)
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 16
+                    scale: muteMouse.pressed ? 0.88 : (muteMouse.containsMouse ? 1.10 : 1)
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+                }
+
+                MouseArea {
+                    id: muteMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (mixerRow.node && mixerRow.node.audio)
+                        mixerRow.node.audio.muted = !mixerRow.node.audio.muted
+                }
             }
         }
     }
