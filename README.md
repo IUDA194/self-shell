@@ -4,6 +4,10 @@
 уведомления, launcher, dashboard, clipboard, password picker и выбор обоев),
 Fish + Tide, tmux, Kitty, Neovim, Fastfetch, btop и `awww`.
 
+## Демо
+
+[▶ Посмотреть видео](assets/demo.mp4)
+
 ## Установка одной командой
 
 На Fedora 43/44 или новее, а также на Arch Linux:
