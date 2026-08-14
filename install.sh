@@ -32,7 +32,7 @@ link_path() {
 
 install_fedora_packages() {
   local packages=(
-    bash btop brightnessctl cargo curl fastfetch fd-find fish fontconfig gcc git
+    bash btop brightnessctl cargo curl dnf5-plugins fastfetch fd-find fish fontconfig gcc git
     grim hyprland hyprlock hyprsunset jq kde-connect kitty libnotify lz4-devel meson mpv-devel nautilus
     NetworkManager neovim ninja-build pass plocate playerctl pkgconf-pkg-config
     python3 python3-pip ripgrep rofi scdoc slurp sqlite tesseract tesseract-langpack-eng
@@ -41,9 +41,37 @@ install_fedora_packages() {
     xz zoxide
   )
 
-  # Fedora 43+ ships Quickshell in the regular repositories.
-  packages+=(quickshell)
+  # Do not replace a full RPM Fusion FFmpeg installation with Fedora's free build.
+  command -v ffmpeg >/dev/null 2>&1 || packages+=(ffmpeg-free)
+
   sudo dnf install -y "${packages[@]}"
+
+  install_quickshell_fedora
+}
+
+install_quickshell_fedora() {
+  command -v quickshell >/dev/null 2>&1 && return
+
+  local fedora_version
+  fedora_version="$(rpm -E '%{fedora}')"
+  [[ "$fedora_version" =~ ^[0-9]+$ ]] || {
+    printf 'Could not determine the Fedora version: %s\n' "$fedora_version" >&2
+    exit 1
+  }
+
+  if (( fedora_version == 43 )); then
+    log 'Enabling the official Quickshell COPR for Fedora 43'
+    sudo dnf -y copr enable errornointernet/quickshell
+  elif (( fedora_version < 43 )); then
+    printf 'Fedora %s is unsupported; Fedora 43 or newer is required.\n' "$fedora_version" >&2
+    exit 1
+  fi
+
+  sudo dnf install -y quickshell
+  command -v quickshell >/dev/null 2>&1 || {
+    printf 'Quickshell installation completed, but its executable was not found.\n' >&2
+    exit 1
+  }
 }
 
 install_arch_packages() {

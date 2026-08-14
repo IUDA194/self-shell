@@ -6,7 +6,7 @@ Fish + Tide, tmux, Kitty, Neovim, Fastfetch, btop и `awww`.
 
 ## Установка одной командой
 
-На Fedora 43+ или Arch Linux:
+На Fedora 43/44 или новее, а также на Arch Linux:
 
 ```bash
 bash -c 'set -e; if ! command -v git >/dev/null; then if command -v dnf >/dev/null; then sudo dnf install -y git; elif command -v pacman >/dev/null; then sudo pacman -S --needed --noconfirm git; else echo "Нужен Git" >&2; exit 1; fi; fi; dir="$HOME/self-shell"; if [[ -d "$dir/.git" ]]; then git -C "$dir" pull --ff-only; else git clone https://github.com/IUDA194/self-shell.git "$dir"; fi; "$dir/install.sh"'
@@ -16,6 +16,9 @@ bash -c 'set -e; if ! command -v git >/dev/null; then if command -v dnf >/dev/nu
 
 - ставит системные зависимости через DNF или pacman;
 - на Fedora собирает `awww` 0.12.1 из официального репозитория Codeberg;
+- на Fedora 44+ устанавливает Quickshell из штатного репозитория, а на Fedora 43
+  автоматически подключает рекомендованный `errornointernet/quickshell` COPR;
+- устанавливает `ffmpeg-free` на Fedora для превью, OCR и мультимедиа;
 - ставит `mpvpaper`, чтобы wallpaper picker работал и с видео;
 - устанавливает JetBrainsMono Nerd Font, Fisher, Fish-плагины и TPM-плагины;
 - создаёт Python-окружение для Google Calendar в dashboard;
