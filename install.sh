@@ -44,7 +44,7 @@ install_fedora_packages() {
   # Do not replace a full RPM Fusion FFmpeg installation with Fedora's free build.
   command -v ffmpeg >/dev/null 2>&1 || packages+=(ffmpeg-free)
 
-  sudo dnf install -y "${packages[@]}"
+  sudo dnf install -y --skip-unavailable "${packages[@]}"
 
   install_quickshell_fedora
 }
@@ -162,6 +162,17 @@ install_calendar_environment() {
     google-api-python-client google-auth-httplib2 google-auth-oauthlib
 }
 
+install_nautilus_config() {
+  if ! command -v dconf >/dev/null 2>&1; then
+    printf 'warning dconf is unavailable; skipped Nautilus settings\n' >&2
+    return
+  fi
+
+  if ! dconf load /org/gnome/nautilus/ < "$repo_dir/config/nautilus/settings.ini"; then
+    printf 'warning could not apply Nautilus settings in this session\n' >&2
+  fi
+}
+
 if [[ "${SELF_SHELL_SKIP_PACKAGES:-0}" != 1 ]]; then
   log 'Installing system packages'
   install_packages
@@ -184,6 +195,9 @@ done
 for name in .tmux.conf .gitconfig; do
   link_path "$repo_dir/home/$name" "$HOME/$name"
 done
+
+log 'Applying Nautilus settings'
+install_nautilus_config
 
 mkdir -p "$HOME/.local/bin" "$HOME/.local/share/self-shell/wallpapers" "$HOME/Documents/Wallpapers"
 for script in "$repo_dir"/bin/*; do

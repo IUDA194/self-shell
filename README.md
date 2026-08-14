@@ -65,6 +65,8 @@ SELF_SHELL_OFFLINE=1 SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 - `config/tmux` и `home/.tmux.conf` — tmux вместе с автозапуском Fish;
 - `config/waypaper` и `bin/self-shell-wallpaper` — состояние выбора обоев,
   запуск `awww-daemon` и восстановление последних обоев;
+- `config/nautilus/settings.ini` — вид папок и состояние окна Nautilus,
+  применяемые установщиком через dconf;
 - остальные каталоги в `config` — терминальное окружение целиком.
 
 Runtime-кэш `~/.cache/awww` не переносится: он генерируется автоматически и
