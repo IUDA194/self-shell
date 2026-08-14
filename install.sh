@@ -173,6 +173,21 @@ install_nautilus_config() {
   fi
 }
 
+set_default_file_manager() {
+  if ! command -v xdg-mime >/dev/null 2>&1; then
+    printf 'warning xdg-mime is unavailable; Nautilus was not set as the default file manager\n' >&2
+    return
+  fi
+
+  local desktop_file='org.gnome.Nautilus.desktop'
+  local mime_type
+  for mime_type in inode/directory application/x-gnome-saved-search; do
+    if ! xdg-mime default "$desktop_file" "$mime_type"; then
+      printf 'warning could not set Nautilus as the default handler for %s\n' "$mime_type" >&2
+    fi
+  done
+}
+
 if [[ "${SELF_SHELL_SKIP_PACKAGES:-0}" != 1 ]]; then
   log 'Installing system packages'
   install_packages
@@ -198,6 +213,9 @@ done
 
 log 'Applying Nautilus settings'
 install_nautilus_config
+
+log 'Setting Nautilus as the default file manager'
+set_default_file_manager
 
 mkdir -p "$HOME/.local/bin" "$HOME/.local/share/self-shell/wallpapers" "$HOME/Documents/Wallpapers"
 for script in "$repo_dir"/bin/*; do
