@@ -115,12 +115,14 @@ ShellRoot {
         }
 
         function toggle(): void {
-            root.notificationCenterScreen = root.focusedScreen()
-            root.notificationCenterOpen = !root.notificationCenterOpen
-            if (root.notificationCenterOpen) {
-                root.activeToast = null
-                toastTimer.stop()
-            }
+            root.notificationCenterOpen = false
+            root.activeToast = null
+            toastTimer.stop()
+            Quickshell.execDetached([
+                "quickshell", "ipc", "--path",
+                Quickshell.env("HOME") + "/.config/hypr/command-center",
+                "call", "commandCenter", "notifications"
+            ])
         }
 
         function close(): void {
@@ -129,6 +131,15 @@ ShellRoot {
 
         function clear(): void {
             root.clearNotifications()
+        }
+
+        function dndState(): bool {
+            return root.notificationDnd
+        }
+
+        function toggleDnd(): bool {
+            root.notificationDnd = !root.notificationDnd
+            return root.notificationDnd
         }
     }
 
