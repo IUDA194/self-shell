@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Networking
+import Quickshell.Bluetooth
 import Quickshell.Services.Notifications
 import Quickshell.Services.Pipewire
 import Quickshell.Wayland
@@ -11,18 +12,25 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
+    Theme { id: theme }
+
     // Compact left rail and its native power overlay.
 
-    property color foreground: "#ccc2b7"
-    property color muted: "#746961"
-    property color accent: "#a67c49"
+    property color foreground: theme.foreground
+    property color muted: theme.muted
+    property color accent: theme.accent
     property string keyboardLayout: "English (US)"
     property bool vpnConnected: false
     property string vpnTooltip: "Проверка состояния V2RayA…"
     property bool powerMenuOpen: false
     property var powerMenuScreen: null
+    property bool connectivityMenuOpen: false
+    property string connectivityPage: "wifi"
+    property var connectivityMenuScreen: null
     property var notificationEntries: []
     property var activeToast: null
+    property var toastEntries: []
+    property bool toastClosing: false
     property var toastScreen: null
     property bool notificationCenterOpen: false
     property var notificationCenterScreen: null
@@ -43,9 +51,13 @@ ShellRoot {
 
     function removeNotification(id) {
         notificationEntries = notificationEntries.filter(entry => entry.notification.id !== id)
+        toastEntries = toastEntries.filter(entry => entry.notification.id !== id)
         if (activeToast && activeToast.notification.id === id) {
-            activeToast = null
-            toastTimer.stop()
+            activeToast = toastEntries.length > 0 ? toastEntries[0] : null
+            if (toastEntries.length > 0)
+                toastTimer.restart()
+            else
+                toastTimer.stop()
         }
     }
 
@@ -57,6 +69,7 @@ ShellRoot {
     function clearNotifications() {
         const current = notificationEntries.slice()
         notificationEntries = []
+        toastEntries = []
         activeToast = null
         toastTimer.stop()
         for (let i = 0; i < current.length; ++i)
@@ -72,6 +85,8 @@ ShellRoot {
 
         if (!notificationDnd && !notificationCenterOpen) {
             activeToast = entry
+            toastClosing = false
+            toastEntries = [entry].concat(toastEntries).slice(0, 3)
             toastScreen = focusedScreen()
             const requested = Number(notification.expireTimeout)
             toastTimer.interval = requested > 0 ? Math.max(2500, requested) : 5000
@@ -117,6 +132,7 @@ ShellRoot {
         function toggle(): void {
             root.notificationCenterOpen = false
             root.activeToast = null
+            root.toastEntries = []
             toastTimer.stop()
             Quickshell.execDetached([
                 "quickshell", "ipc", "--path",
@@ -146,7 +162,20 @@ ShellRoot {
     Timer {
         id: toastTimer
         interval: 5000
-        onTriggered: root.activeToast = null
+        onTriggered: {
+            root.toastClosing = true
+            toastCloseTimer.restart()
+        }
+    }
+
+    Timer {
+        id: toastCloseTimer
+        interval: 340
+        onTriggered: {
+            root.activeToast = null
+            root.toastEntries = []
+            root.toastClosing = false
+        }
     }
 
     SystemClock {
@@ -232,20 +261,157 @@ ShellRoot {
 
             screen: modelData
             color: "transparent"
-            implicitWidth: 55
+            readonly property bool connectivityActive: root.connectivityMenuOpen
+                && (root.connectivityMenuScreen === null || root.connectivityMenuScreen === modelData)
+            // Keep the layer-shell surface stable. Resizing this window makes
+            // the compositor expose a travelling edge during close.
+            implicitWidth: 460
             implicitHeight: 900
             anchors.left: true
             exclusiveZone: 55
+            mask: sidebarInputRegion
+            WlrLayershell.keyboardFocus: connectivityActive
+                ? WlrKeyboardFocus.OnDemand
+                : WlrKeyboardFocus.None
+
+            Region {
+                id: sidebarInputRegion
+                x: 0
+                y: 0
+                width: 55
+                height: panel.height
+
+                Region {
+                    x: 55
+                    y: connectivityPanel.surfaceTop
+                    width: panel.connectivityActive
+                        ? Math.max(0, connectivityPanel.surfaceRight - 55)
+                        : 0
+                    height: panel.connectivityActive
+                        ? Math.max(0, connectivityPanel.surfaceBottom - connectivityPanel.surfaceTop)
+                        : 0
+                }
+            }
+
+            Canvas {
+                id: sidebarSurface
+                z: 0
+                anchors.fill: parent
+                antialiasing: true
+
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
+
+                Connections {
+                    target: connectivityPanel
+                    function onRevealProgressChanged() { sidebarSurface.requestPaint() }
+                    function onSurfaceTopChanged() { sidebarSurface.requestPaint() }
+                    function onSurfaceBottomChanged() { sidebarSurface.requestPaint() }
+                    function onSurfaceRightChanged() { sidebarSurface.requestPaint() }
+                    function onPageChanged() { sidebarSurface.requestPaint() }
+                }
+
+                Connections {
+                    target: panel
+                    function onConnectivityActiveChanged() {
+                        // The menu becomes invisible in the same update that
+                        // ends closing, so force one final compact-frame paint.
+                        sidebarSurface.requestPaint()
+                        Qt.callLater(() => sidebarSurface.requestPaint())
+                    }
+                }
+
+                onPaint: {
+                    const ctx = getContext("2d")
+                    const h = height
+                    const railRight = 55
+                    const p = panel.connectivityActive
+                        ? connectivityPanel.revealProgress
+                        : 0
+                    const top = connectivityPanel.surfaceTop
+                    const bottom = connectivityPanel.surfaceBottom
+                    const right = railRight + (connectivityPanel.surfaceRight - railRight) * p
+                    const extensionWidth = Math.max(0, right - railRight)
+                    // Preserve a capsule-like leading edge while collapsing;
+                    // only reduce the radius when the remaining width itself
+                    // becomes narrower than the full corner diameter.
+                    const radius = Math.min(22, extensionWidth / 2)
+                    const shoulder = Math.min(18, extensionWidth / 2)
+                    const lowerShoulder = Math.min(shoulder, Math.max(0, h - 9 - bottom))
+
+                    ctx.reset()
+                    ctx.clearRect(0, 0, width, height)
+                    ctx.beginPath()
+                    ctx.moveTo(0, 0)
+                    ctx.lineTo(46, 0)
+                    ctx.quadraticCurveTo(railRight, 0, railRight, 9)
+                    ctx.lineTo(railRight, top - shoulder)
+
+                    if (p > 0.001) {
+                        ctx.bezierCurveTo(railRight, top - 7 * p,
+                                          railRight + 7 * p, top,
+                                          railRight + radius, top)
+                        ctx.lineTo(right - radius, top)
+                        ctx.quadraticCurveTo(right, top, right, top + radius)
+                        ctx.lineTo(right, bottom - radius)
+                        ctx.quadraticCurveTo(right, bottom, right - radius, bottom)
+                        ctx.lineTo(railRight + radius, bottom)
+                        ctx.bezierCurveTo(railRight + 7 * p, bottom,
+                                          railRight, bottom + Math.min(7 * p, lowerShoulder),
+                                          railRight, bottom + lowerShoulder)
+                    }
+
+                    ctx.lineTo(railRight, h - 9)
+                    ctx.quadraticCurveTo(railRight, h, 46, h)
+                    ctx.lineTo(0, h)
+                    ctx.closePath()
+                    // Exact launcher surface and outline colours.
+                    ctx.fillStyle = theme.background
+                    ctx.fill()
+                    ctx.lineWidth = 1.25
+                    ctx.strokeStyle = "rgba(117, 97, 84, 0.72)"
+
+                    if (connectivityPanel.closing) {
+                        // Crossfade from the expanded outline to the static
+                        // rail outline, avoiding both a travelling hard line
+                        // and a one-frame border flash at the end.
+                        const borderProgress = Math.max(0, Math.min(1, p))
+                        // Reveal the compact outline only at the very end,
+                        // once the expanded surface is almost fully collapsed.
+                        const compactAlpha = Math.max(0, Math.min(1, (0.12 - borderProgress) / 0.12))
+                        ctx.globalAlpha = 1 - compactAlpha
+                        ctx.stroke()
+
+                        ctx.globalAlpha = compactAlpha
+                        ctx.beginPath()
+                        ctx.moveTo(0, 0)
+                        ctx.lineTo(46, 0)
+                        ctx.quadraticCurveTo(railRight, 0, railRight, 9)
+                        ctx.lineTo(railRight, h - 9)
+                        ctx.quadraticCurveTo(railRight, h, 46, h)
+                        ctx.lineTo(0, h)
+                        ctx.closePath()
+                        ctx.stroke()
+                        ctx.globalAlpha = 1
+                    } else {
+                        ctx.stroke()
+                    }
+                }
+            }
 
             Rectangle {
                 id: rail
+                z: 2
                 x: -9
-                width: parent.width + 9
+                // The layer window grows to host popouts, but the visible rail
+                // must always retain its compact width.
+                width: 64
                 height: parent.height
                 radius: 9
-                color: "#d923211f"
-                border.width: 1
-                border.color: "#8f685f57"
+                // Content-only rail: sidebarSurface owns the one shared shape.
+                color: "transparent"
+                border.width: 0
+                border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
 
                 // Workspaces stay compact: Quickshell only exposes workspaces that exist.
                 Column {
@@ -332,14 +498,47 @@ ShellRoot {
                         }
                         fontPixelSize: 11
                         tooltip: "Раскладка клавиатуры"
-                        onClicked: root.run("${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/scripts/switch-keyboard-layout.sh")
+                        onClicked: {
+                            if (root.connectivityMenuOpen && root.connectivityPage === "keyboard") {
+                                connectivityPanel.close()
+                                return
+                            }
+                            root.connectivityPage = "keyboard"
+                            root.connectivityMenuScreen = panel.screen
+                            root.connectivityMenuOpen = true
+                        }
                     }
 
                     BarButton {
                         text: Networking.wifiEnabled ? "" : "󰤮"
                         color: Networking.wifiEnabled ? root.foreground : root.accent
                         tooltip: Networking.wifiEnabled ? "Wi-Fi включён" : "Wi-Fi выключен"
-                        onClicked: root.run("${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/scripts/wifi-menu.sh")
+                        onClicked: {
+                            if (root.connectivityMenuOpen && root.connectivityPage === "wifi") {
+                                connectivityPanel.close()
+                                return
+                            }
+                            root.connectivityPage = "wifi"
+                            root.connectivityMenuScreen = panel.screen
+                            root.connectivityMenuOpen = true
+                        }
+                    }
+
+                    BarButton {
+                        readonly property var adapter: Bluetooth.defaultAdapter
+                        readonly property bool connected: Bluetooth.devices.values.some(device => device.connected)
+                        text: connected ? "󰂱" : (adapter && adapter.enabled ? "󰂯" : "󰂲")
+                        color: adapter && adapter.enabled ? root.foreground : root.accent
+                        tooltip: connected ? "Bluetooth подключён" : (adapter && adapter.enabled ? "Bluetooth включён" : "Bluetooth выключен")
+                        onClicked: {
+                            if (root.connectivityMenuOpen && root.connectivityPage === "bluetooth") {
+                                connectivityPanel.close()
+                                return
+                            }
+                            root.connectivityPage = "bluetooth"
+                            root.connectivityMenuScreen = panel.screen
+                            root.connectivityMenuOpen = true
+                        }
                     }
 
                     BarButton {
@@ -356,22 +555,30 @@ ShellRoot {
                         text: !audio || audio.muted ? "󰝟" : (audio.volume < 0.34 ? "" : (audio.volume < 0.67 ? "" : ""))
                         color: audio && audio.muted ? root.accent : root.foreground
                         tooltip: audio ? "Громкость: " + Math.round(audio.volume * 100) + "%" : "Звук"
-                        onClicked: if (audio) audio.muted = !audio.muted
+                        onClicked: {
+                            if (root.connectivityMenuOpen && root.connectivityPage === "audio") {
+                                connectivityPanel.close()
+                                return
+                            }
+                            root.connectivityPage = "audio"
+                            root.connectivityMenuScreen = panel.screen
+                            root.connectivityMenuOpen = true
+                        }
                         onWheelUp: if (audio) audio.volume = Math.min(1.0, audio.volume + 0.05)
                         onWheelDown: if (audio) audio.volume = Math.max(0.0, audio.volume - 0.05)
                     }
 
-                    BarButton {
-                        text: ""
-                        color: root.accent
-                        fontPixelSize: 14
-                        tooltip: "Питание"
-                        onClicked: {
-                            root.powerMenuScreen = panel.screen
-                            root.powerMenuOpen = true
-                        }
-                    }
                 }
+            }
+
+            ConnectivityMenu {
+                id: connectivityPanel
+                z: 3
+                anchors.fill: parent
+                page: root.connectivityPage
+                keyboardLayout: root.keyboardLayout
+                visible: panel.connectivityActive
+                onCloseRequested: root.connectivityMenuOpen = false
             }
         }
     }
@@ -420,8 +627,9 @@ ShellRoot {
             required property var modelData
 
             screen: modelData
-            visible: root.activeToast !== null && root.toastScreen === modelData
-            entry: root.activeToast
+            visible: root.toastEntries.length > 0 && root.toastScreen === modelData
+            entries: root.toastEntries
+            closing: root.toastClosing
             onDismissRequested: notification => root.dismissNotification(notification)
         }
     }

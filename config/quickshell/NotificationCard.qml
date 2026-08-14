@@ -6,9 +6,14 @@ import Quickshell.Widgets
 Rectangle {
     id: root
 
+    Theme { id: theme }
+
     required property var notification
     property double createdAt: Date.now()
     property bool compact: false
+    property bool swipeEnabled: false
+    property bool dismissing: false
+    property real dragOffset: 0
 
     signal dismissRequested
 
@@ -27,11 +32,34 @@ Rectangle {
 
     implicitHeight: content.implicitHeight + 22
     radius: 16
-    color: cardMouse.containsMouse ? "#f04f443e" : "#b5473d37"
-    border.width: notification.urgency === 2 ? 1 : 0
-    border.color: "#c4746e"
+    color: cardMouse.containsMouse ? theme.surface : theme.background
+    border.width: 1
+    border.color: notification.urgency === 2
+        ? theme.accent : theme.outline
 
     Behavior on color { ColorAnimation { duration: 120 } }
+
+    transform: Translate { x: root.dragOffset }
+    opacity: swipeEnabled ? Math.max(0.18, 1 - Math.abs(dragOffset) / (width * 0.9)) : 1
+    scale: swipeEnabled ? 1 - Math.min(0.035, Math.abs(dragOffset) / width * 0.035) : 1
+
+    Behavior on dragOffset {
+        enabled: !swipeMouse.drag.active
+        NumberAnimation {
+            duration: root.dismissing ? 260 : 420
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
+        }
+    }
+
+    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+
+    Timer {
+        id: swipeDismissTimer
+        interval: 250
+        onTriggered: root.dismissRequested()
+    }
 
     Timer {
         interval: 60000
@@ -47,8 +75,37 @@ Rectangle {
         acceptedButtons: Qt.NoButton
     }
 
+    MouseArea {
+        id: swipeMouse
+        z: 0
+        anchors.fill: parent
+        enabled: root.swipeEnabled && !root.dismissing
+        hoverEnabled: true
+        cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+        drag.target: swipeHandle
+        drag.axis: Drag.XAxis
+        drag.minimumX: -root.width
+        drag.maximumX: root.width
+        preventStealing: true
+
+        onPressed: swipeHandle.x = root.dragOffset
+        onPositionChanged: root.dragOffset = swipeHandle.x
+        onReleased: {
+            if (Math.abs(root.dragOffset) >= root.width * 0.28) {
+                root.dismissing = true
+                root.dragOffset = root.dragOffset < 0 ? -root.width * 1.15 : root.width * 1.15
+                swipeDismissTimer.restart()
+            } else {
+                root.dragOffset = 0
+            }
+        }
+
+        Item { id: swipeHandle; width: 1; height: 1 }
+    }
+
     ColumnLayout {
         id: content
+        z: 1
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
@@ -63,7 +120,7 @@ Rectangle {
                 Layout.preferredWidth: 38
                 Layout.preferredHeight: 38
                 radius: 19
-                color: notification.urgency === 2 ? "#3ec4746e" : "#35b58e66"
+                color: notification.urgency === 2 ? theme.surfaceAlt : theme.surface
 
                 IconImage {
                     anchors.centerIn: parent
@@ -78,7 +135,7 @@ Rectangle {
                     anchors.centerIn: parent
                     visible: !parent.children[0].visible
                     text: notification.urgency === 2 ? "󰀦" : "󰂚"
-                    color: notification.urgency === 2 ? "#dc948c" : "#c9a06d"
+                    color: notification.urgency === 2 ? theme.accentHover : theme.accent
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 15
                 }
@@ -91,7 +148,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     text: notification.summary || notification.appName || "Уведомление"
-                    color: "#e0d6ca"
+                    color: theme.foreground
                     wrapMode: root.compact ? Text.NoWrap : Text.Wrap
                     elide: root.compact ? Text.ElideRight : Text.ElideNone
                     font.family: "Noto Sans"
@@ -106,7 +163,7 @@ Rectangle {
                     Text {
                         Layout.fillWidth: true
                         text: notification.appName || "Система"
-                        color: "#8f8278"
+                        color: theme.muted
                         elide: Text.ElideRight
                         font.family: "Noto Sans"
                         font.pixelSize: 9
@@ -115,7 +172,7 @@ Rectangle {
                     Text {
                         id: ageLabel
                         text: root.ageText()
-                        color: "#746961"
+                        color: theme.selected
                         font.family: "JetBrainsMono Nerd Font"
                         font.pixelSize: 9
                     }
@@ -126,22 +183,31 @@ Rectangle {
                 Layout.preferredWidth: 28
                 Layout.preferredHeight: 28
                 radius: 9
-                color: closeMouse.containsMouse ? "#62514843" : "transparent"
+                color: closeMouse.containsMouse ? theme.surfaceAlt : "transparent"
 
                 Text {
                     anchors.centerIn: parent
                     text: "×"
-                    color: "#a99c91"
+                    color: theme.muted
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 16
                 }
 
                 MouseArea {
                     id: closeMouse
+                    z: 10
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.dismissRequested()
+                    onClicked: {
+                        if (!root.swipeEnabled) {
+                            root.dismissRequested()
+                            return
+                        }
+                        root.dismissing = true
+                        root.dragOffset = root.width * 1.15
+                        swipeDismissTimer.restart()
+                    }
                 }
             }
         }
@@ -151,7 +217,7 @@ Rectangle {
             Layout.fillWidth: true
             text: notification.body
             textFormat: Text.PlainText
-            color: "#c8bdb1"
+            color: theme.foregroundSoft
             wrapMode: Text.Wrap
             elide: root.compact ? Text.ElideRight : Text.ElideNone
             maximumLineCount: root.compact ? 2 : 1000
@@ -173,13 +239,13 @@ Rectangle {
                     width: actionText.implicitWidth + 22
                     height: 30
                     radius: 9
-                    color: actionMouse.containsMouse ? "#735d4c40" : "#59463b35"
+                    color: actionMouse.containsMouse ? theme.surfaceAlt : theme.surface
 
                     Text {
                         id: actionText
                         anchors.centerIn: parent
                         text: modelData.text
-                        color: "#d6cabe"
+                        color: theme.foreground
                         font.family: "JetBrainsMono Nerd Font"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -187,6 +253,7 @@ Rectangle {
 
                     MouseArea {
                         id: actionMouse
+                        z: 10
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor

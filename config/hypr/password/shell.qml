@@ -9,14 +9,16 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
+    Theme { id: theme }
+
     // Native password-store picker.
 
-    readonly property color background: "#f226211e"
-    readonly property color surface: "#b5372f2b"
-    readonly property color surfaceHover: "#d04b4039"
-    readonly property color foreground: "#ddd3c6"
-    readonly property color muted: "#8f8278"
-    readonly property color accent: "#b58e66"
+    readonly property color background: theme.background
+    readonly property color surface: theme.surface
+    readonly property color surfaceHover: theme.surfaceAlt
+    readonly property color foreground: theme.foreground
+    readonly property color muted: theme.muted
+    readonly property color accent: theme.accent
 
     property var entries: []
     property var results: []

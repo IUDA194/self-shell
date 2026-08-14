@@ -6,6 +6,8 @@ import Quickshell.Widgets
 Rectangle {
     id: root
 
+    Theme { id: theme }
+
     required property var group
     property bool expanded: group.entries.length === 1
 
@@ -13,9 +15,9 @@ Rectangle {
 
     implicitHeight: header.height + (expanded ? cards.implicitHeight + 12 : 0)
     radius: 22
-    color: "#d9362e2a"
+    color: theme.background
     border.width: 1
-    border.color: expanded ? "#7060554c" : "#4f443e"
+    border.color: expanded ? theme.accent : theme.outline
     clip: true
 
     Behavior on implicitHeight {
@@ -31,7 +33,7 @@ Rectangle {
 
         Rectangle {
             anchors.fill: parent
-            color: headerMouse.containsMouse ? "#554a403a" : "transparent"
+            color: headerMouse.containsMouse ? theme.surface : "transparent"
             Behavior on color { ColorAnimation { duration: 110 } }
         }
 
@@ -45,7 +47,7 @@ Rectangle {
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
                 radius: 22
-                color: "#59483d36"
+                color: theme.surface
 
                 IconImage {
                     id: appIcon
@@ -61,7 +63,7 @@ Rectangle {
                     anchors.centerIn: parent
                     visible: !appIcon.visible
                     text: "󰏖"
-                    color: "#c9a06d"
+                    color: theme.accent
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 14
                 }
@@ -70,7 +72,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 text: root.group.name
-                color: "#ddd3c6"
+                color: theme.foreground
                 elide: Text.ElideRight
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 13
@@ -81,12 +83,12 @@ Rectangle {
                 Layout.preferredWidth: 34
                 Layout.preferredHeight: 26
                 radius: 13
-                color: "#594b423c"
+                color: theme.surfaceAlt
 
                 Text {
                     anchors.centerIn: parent
                     text: root.group.entries.length.toString()
-                    color: "#c5b8ac"
+                    color: theme.foreground
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 9
                     font.weight: Font.Bold
@@ -95,7 +97,7 @@ Rectangle {
 
             Text {
                 text: "󰅀"
-                color: "#978a80"
+                color: theme.muted
                 rotation: root.expanded ? 180 : 0
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 16

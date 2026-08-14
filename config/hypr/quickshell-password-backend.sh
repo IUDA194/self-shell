@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-store="${PASSWORD_STORE_DIR:-${HOME}/.password-store}"
+# This desktop uses one explicit pass store. Do not inherit a stale value from
+# a long-running compositor/Quickshell process.
+store="${HOME}/.pass/passwords"
+export PASSWORD_STORE_DIR="$store"
 
 list_entries() {
     [[ -d "$store" ]] || exit 0

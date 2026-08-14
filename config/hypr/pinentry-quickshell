@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -u
+
+description="Введите пароль для разблокировки ключа OpenPGP"
+prompt="Пароль"
+
+decode() { printf '%b' "${1//%/\\x}"; }
+escape() {
+    local value="$1"
+    value=${value//'%'/'%25'}
+    value=${value//$'\n'/'%0A'}
+    value=${value//$'\r'/'%0D'}
+    printf '%s' "$value"
+}
+
+printf 'OK Quickshell pinentry ready\n'
+while IFS= read -r line; do
+    command=${line%% *}
+    argument=${line#"$command"}
+    argument=${argument# }
+    case "$command" in
+        SETDESC) description=$(decode "$argument"); printf 'OK\n' ;;
+        SETPROMPT) prompt=$(decode "$argument"); printf 'OK\n' ;;
+        SETTITLE|SETOK|SETCANCEL|SETERROR|OPTION|SETQUALITYBAR) printf 'OK\n' ;;
+        GETINFO) printf 'D 1.0\nOK\n' ;;
+        GETPIN)
+            response=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/self-shell-pinentry.XXXXXX")
+            chmod 600 "$response"
+            : > "$response"
+            export SELF_SHELL_PINENTRY_RESPONSE="$response"
+            export SELF_SHELL_PINENTRY_DESCRIPTION="$description"
+            export SELF_SHELL_PINENTRY_PROMPT="$prompt"
+            quickshell --path "$HOME/.config/hypr/pinentry" >/dev/null 2>&1
+            status=$?
+            if [[ $status -eq 0 && -s "$response" ]]; then
+                IFS= read -r secret < "$response"
+                printf 'D %s\nOK\n' "$(escape "$secret")"
+            else
+                printf 'ERR 83886179 Operation cancelled <Pinentry>\n'
+            fi
+            rm -f "$response"
+            unset secret SELF_SHELL_PINENTRY_RESPONSE
+            ;;
+        BYE) printf 'OK closing connection\n'; exit 0 ;;
+        *) printf 'OK\n' ;;
+    esac
+done

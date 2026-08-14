@@ -10,13 +10,15 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
-    readonly property color background: "#26201d"
-    readonly property color surface: "#372d29"
-    readonly property color surfaceAlt: "#4f443e"
-    readonly property color selected: "#756054"
-    readonly property color foreground: "#ddd3c6"
-    readonly property color muted: "#9a8b80"
-    readonly property color accent: "#b58e66"
+    Theme { id: theme }
+
+    readonly property color background: theme.background
+    readonly property color surface: theme.surface
+    readonly property color surfaceAlt: theme.surfaceAlt
+    readonly property color selected: theme.selected
+    readonly property color foreground: theme.foreground
+    readonly property color muted: theme.muted
+    readonly property color accent: theme.accent
 
     property var results: []
     property var launchHistory: ({})
@@ -24,6 +26,9 @@ ShellRoot {
         { name: "Обои", description: "!wallpaper — выбрать обои", keywords: "wallpaper wall walls обои", category: "Оформление", icon: "preferences-desktop-wallpaper", symbol: "󰸉", mode: "wallpaper", command: "" },
         { name: "Уведомления", description: "!notifications — последние события", keywords: "notifications notification notif уведомления уведомление увед", category: "Уведомления", icon: "preferences-system-notifications", symbol: "󰂚", mode: "notifications", command: "" },
         { name: "Система", description: "Сеанс и питание", keywords: "system power session система питание сеанс", category: "Система", icon: "system-shutdown", symbol: "", mode: "system", command: "" }
+    ]
+    readonly property var customApplications: [
+        { id: "local-telegram", name: "Telegram", description: "Мессенджер", keywords: "telegram телеграм messenger мессенджер", icon: "telegram", command: Quickshell.env("HOME") + "/Apps/Telegram" }
     ]
     readonly property var systemActions: [
         { name: "Заблокировать", description: "Заблокировать текущий сеанс", category: "Сеанс", icon: "system-lock-screen", symbol: "", command: "hyprlock" },
@@ -380,6 +385,30 @@ ShellRoot {
 
         const applications = DesktopEntries.applications.values
 
+        for (let i = 0; i < customApplications.length; ++i) {
+            const application = customApplications[i]
+            const searchable = application.name + " " + application.description
+                + " " + application.keywords + " " + application.command
+            const match = fuzzyScore(searchable, query)
+            if (match >= 0) {
+                const usage = historyFor(application.id)
+                const count = Number(usage.count || 0)
+                const lastUsed = Number(usage.last || 0)
+                const score = query.length === 0
+                    ? count * 10000 + lastUsed / 10000000000000
+                    : match * 10000 + Math.min(count, 999)
+                matches.push({
+                    kind: "customApp",
+                    entry: application,
+                    name: application.name,
+                    description: application.description,
+                    icon: application.icon,
+                    command: application.command,
+                    score: score
+                })
+            }
+        }
+
         for (let i = 0; i < applications.length; ++i) {
             const application = applications[i]
             if (!application || application.noDisplay)
@@ -439,6 +468,10 @@ ShellRoot {
             return
         } else if (result.kind === "action")
             Quickshell.execDetached(["bash", "-lc", result.command])
+        else if (result.kind === "customApp") {
+            recordLaunch(result.entry.id)
+            Quickshell.execDetached([result.command])
+        }
         else {
             recordLaunch(result.entry.id)
             result.entry.execute()
@@ -449,12 +482,9 @@ ShellRoot {
     function openLauncher() {
         closeTimer.stop()
         closing = false
-        // Paint almost the complete launcher on the very first frame, then let
-        // the expressive curve settle the remaining distance.
+        // Reveal the complete surface from the bottom screen edge.
         if (!windowShown)
-            revealProgress = 0.92
-        else
-            revealProgress = Math.max(revealProgress, 0.92)
+            revealProgress = 0
         windowShown = true
         wallpaperMode = false
         systemMode = false
@@ -525,8 +555,8 @@ ShellRoot {
 
     Timer {
         id: closeTimer
-        // Keep the layer alive until the expressive spatial animation finishes.
-        interval: 510
+        // Keep the layer alive until the spatial animation finishes.
+        interval: 270
         onTriggered: {
             root.windowShown = false
             root.closing = false
@@ -547,7 +577,7 @@ ShellRoot {
         enabled: root.windowShown
 
         NumberAnimation {
-            duration: 500
+            duration: 260
             easing.type: Easing.BezierSpline
             easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
         }
@@ -615,29 +645,34 @@ ShellRoot {
                     : root.notificationsMode ? notificationContentHeight
                     : 96
             readonly property real contentHeight: listContentHeight + 48 + 16 + 16 + 12
+            readonly property real expandedHeight: Math.min(parent.height - 48, contentHeight)
+            property real animatedHeight: expandedHeight
+
+            onExpandedHeightChanged: animatedHeight = expandedHeight
+
+            Behavior on animatedHeight {
+                enabled: root.windowShown && !root.closing && root.revealProgress > 0.98
+                NumberAnimation {
+                    duration: 320
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
+                }
+            }
 
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: -(height + 12) * (1 - root.revealProgress)
+            anchors.bottomMargin: 0
             anchors.horizontalCenter: parent.horizontalCenter
             // Integer logical coordinate avoids half-pixel sampling at 1.25 scale.
             anchors.horizontalCenterOffset: 28
 
             width: Math.min(parent.width - 48, root.wallpaperMode ? 1050 : 632)
-            height: Math.min(parent.height - 48, contentHeight)
-            radius: 28
+            height: animatedHeight * root.revealProgress
+            radius: Math.min(28, height / 2)
             color: root.background
             border.width: 1
-            border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
-            opacity: root.revealProgress
-
-            Behavior on height {
-                enabled: !root.closing
-                NumberAnimation {
-                    duration: 500
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
-                }
-            }
+            border.color: theme.outline
+            opacity: 1
+            clip: true
 
             Behavior on width {
                 enabled: !root.closing
@@ -724,7 +759,7 @@ ShellRoot {
                             width: resultList.width
                             height: resultList.currentItem ? resultList.currentItem.height : 0
                             radius: 16
-                            color: "#443a35"
+                            color: root.surfaceAlt
 
                             Behavior on y {
                                 NumberAnimation {
@@ -867,7 +902,7 @@ ShellRoot {
                             width: notificationList.width
                             height: notificationList.currentItem ? notificationList.currentItem.height : 0
                             radius: 18
-                            color: "#443a35"
+                            color: root.surfaceAlt
                             Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                         }
 
@@ -884,9 +919,9 @@ ShellRoot {
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 18
-                                color: notificationGroup.expanded ? "#3c322e" : "transparent"
+                                color: notificationGroup.expanded ? root.surface : "transparent"
                                 border.width: notificationGroup.expanded ? 1 : 0
-                                border.color: "#66564d45"
+                                border.color: theme.outline
                             }
 
                             RowLayout {
@@ -902,7 +937,9 @@ ShellRoot {
                                     Layout.preferredWidth: 36
                                     Layout.preferredHeight: 36
                                     radius: 18
-                                    color: notificationGroup.modelData.urgency === 2 ? "#68423e" : "#59483d"
+                                    color: notificationGroup.modelData.urgency === 2
+                                        ? Qt.tint(root.surfaceAlt, Qt.alpha(theme.critical, 0.22))
+                                        : root.surfaceAlt
 
                                     Image {
                                         anchors.centerIn: parent
@@ -945,7 +982,7 @@ ShellRoot {
                                     Layout.preferredWidth: 38
                                     Layout.preferredHeight: 24
                                     radius: 12
-                                    color: "#594b423c"
+                                    color: root.selected
 
                                     Row {
                                         anchors.centerIn: parent
@@ -1000,7 +1037,7 @@ ShellRoot {
                                         height: 50
                                         radius: 13
                                         clip: true
-                                        color: nestedMouse.containsMouse ? "#51443e" : "#473b36"
+                                        color: nestedMouse.containsMouse ? root.surfaceAlt : root.surface
 
                                         RowLayout {
                                             anchors.fill: parent
@@ -1105,7 +1142,7 @@ ShellRoot {
                                 color: root.surface
                                 border.width: wallpaperCard.ListView.isCurrentItem ? 2 : 1
                                 border.color: wallpaperCard.ListView.isCurrentItem
-                                    ? root.accent : Qt.rgba(0.46, 0.38, 0.33, 0.55)
+                                    ? root.accent : theme.outline
                                 clip: true
                                 layer.enabled: true
                                 layer.effect: MultiEffect {
@@ -1159,7 +1196,7 @@ ShellRoot {
                                     width: wallpaperType.implicitWidth + 12
                                     height: 21
                                     radius: 7
-                                    color: "#d926201d"
+                                    color: root.background
 
                                     Text {
                                         id: wallpaperType
@@ -1398,9 +1435,13 @@ ShellRoot {
                             Layout.preferredWidth: 92
                             Layout.preferredHeight: 32
                             radius: 16
-                            color: clearNotificationsMouse.containsMouse ? "#805247" : "#68443d"
+                            color: clearNotificationsMouse.containsMouse
+                                ? Qt.lighter(theme.critical, 1.08)
+                                : theme.critical
                             border.width: 1
-                            border.color: clearNotificationsMouse.containsMouse ? "#b87568" : "#8e5d53"
+                            border.color: clearNotificationsMouse.containsMouse
+                                ? Qt.lighter(theme.critical, 1.25)
+                                : Qt.darker(theme.critical, 1.2)
 
                             Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -1410,7 +1451,7 @@ ShellRoot {
 
                                 Text {
                                     text: "󰆴"
-                                    color: "#efb4a8"
+                                    color: root.foreground
                                     font.family: "JetBrainsMono Nerd Font"
                                     font.pixelSize: 14
                                 }

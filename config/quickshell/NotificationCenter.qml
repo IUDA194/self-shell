@@ -7,18 +7,20 @@ import Quickshell.Wayland
 PanelWindow {
     id: window
 
+    Theme { id: theme }
+
     property var entries: []
     property bool dnd: false
     property bool grouped: true
     property real revealProgress: 0
     property bool animateReveal: false
     readonly property var groups: buildGroups(entries)
-    readonly property color background: "#26201d"
-    readonly property color surface: "#372d29"
-    readonly property color surfaceHigh: "#4f443e"
-    readonly property color foreground: "#ddd3c6"
-    readonly property color muted: "#9a8b80"
-    readonly property color accent: "#b58e66"
+    readonly property color background: theme.background
+    readonly property color surface: theme.surface
+    readonly property color surfaceHigh: theme.surfaceAlt
+    readonly property color foreground: theme.foreground
+    readonly property color muted: theme.muted
+    readonly property color accent: theme.accent
 
     signal closeRequested
     signal clearRequested
@@ -123,9 +125,9 @@ PanelWindow {
             anchors.margins: 16
             width: Math.min(454, parent.width - 32)
             radius: 28
-            color: "#f526201d"
+            color: window.background
             border.width: 1
-            border.color: "#806d5a4f"
+            border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
             opacity: window.revealProgress
             transform: Translate { x: 32 * (1 - window.revealProgress) }
 

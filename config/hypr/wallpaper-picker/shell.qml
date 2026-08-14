@@ -8,13 +8,15 @@ import Quickshell.Wayland
 ShellRoot {
     id: shell
 
+    Theme { id: theme }
+
     // Warm Obsidian palette used by the rest of this desktop.
-    readonly property color background: "#26201d"
-    readonly property color surface: "#372d29"
-    readonly property color surfaceAlt: "#4f443e"
-    readonly property color foreground: "#ddd3c6"
-    readonly property color muted: "#9a8b80"
-    readonly property color accent: "#b58e66"
+    readonly property color background: theme.background
+    readonly property color surface: theme.surface
+    readonly property color surfaceAlt: theme.surfaceAlt
+    readonly property color foreground: theme.foreground
+    readonly property color muted: theme.muted
+    readonly property color accent: theme.accent
 
     property var wallpapers: []
     property string statusText: ""

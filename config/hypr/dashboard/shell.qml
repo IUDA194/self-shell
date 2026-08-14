@@ -12,15 +12,17 @@ import Quickshell.Widgets
 ShellRoot {
     id: root
 
-    readonly property color background: "#26201d"
-    readonly property color surface: "#372d29"
-    readonly property color surfaceAlt: "#4f443e"
-    readonly property color selected: "#756054"
-    readonly property color foreground: "#ddd3c6"
-    readonly property color muted: "#9a8b80"
-    readonly property color accent: "#b58e66"
-    readonly property color critical: "#c4746e"
-    readonly property color green: "#8aa08a"
+    Theme { id: theme }
+
+    readonly property color background: theme.background
+    readonly property color surface: theme.surface
+    readonly property color surfaceAlt: theme.surfaceAlt
+    readonly property color selected: theme.selected
+    readonly property color foreground: theme.foreground
+    readonly property color muted: theme.muted
+    readonly property color accent: theme.accent
+    readonly property color critical: theme.critical
+    readonly property color green: theme.success
 
     property real cpuUsage: 0
     property real memoryUsage: 0
@@ -522,9 +524,9 @@ ShellRoot {
                     topRightRadius: 0
                     bottomLeftRadius: 26
                     bottomRightRadius: 26
-                    color: Qt.rgba(0.149, 0.125, 0.114, 0.97)
+                    color: root.background
                     border.width: 1
-                    border.color: Qt.rgba(0.71, 0.56, 0.40, 0.58)
+                    border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
                     clip: true
                     opacity: 1
                     scale: 1
@@ -641,7 +643,7 @@ ShellRoot {
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 1
-                            color: Qt.rgba(0.46, 0.38, 0.33, 0.5)
+                            color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
                         }
 
                         Item {
@@ -675,7 +677,7 @@ ShellRoot {
                                         radius: 20
                                         color: root.surface
                                         border.width: 1
-                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.42)
+                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
 
                                         ColumnLayout {
                                             anchors.fill: parent
@@ -816,7 +818,7 @@ ShellRoot {
                                             radius: 20
                                             color: root.surface
                                             border.width: 1
-                                            border.color: Qt.rgba(0.46, 0.38, 0.33, 0.42)
+                                            border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
                                             clip: true
 
                                             ColumnLayout {
@@ -907,7 +909,7 @@ ShellRoot {
                                                 radius: 20
                                                 color: root.surface
                                                 border.width: 1
-                                                border.color: Qt.rgba(0.46, 0.38, 0.33, 0.42)
+                                                border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
 
                                                 ColumnLayout {
                                                     anchors.fill: parent
@@ -971,7 +973,7 @@ ShellRoot {
                                                         radius: 18
                                                         color: root.surface
                                                         border.width: 1
-                                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.42)
+                                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
 
                                                         Column {
                                                             anchors.centerIn: parent
@@ -1014,7 +1016,7 @@ ShellRoot {
                                         radius: 20
                                         color: root.surface
                                         border.width: 1
-                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.42)
+                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
 
                                         RowLayout {
                                             anchors.fill: parent
@@ -1158,7 +1160,7 @@ ShellRoot {
                                     radius: 20
                                     color: root.surface
                                     border.width: 1
-                                    border.color: Qt.rgba(0.46, 0.38, 0.33, 0.42)
+                                    border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
                                     clip: true
 
                                     Text {
@@ -1755,7 +1757,9 @@ ShellRoot {
                     width: dockWindow.expanded ? dockWindow.contentWidth : 180
                     height: dockWindow.expanded ? 88 : 0
                     radius: 22
-                    color: "#ee26201d"
+                    color: root.background
+                    border.width: 1
+                    border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
                     clip: true
 
                     Behavior on width {
@@ -1818,10 +1822,10 @@ ShellRoot {
                                     anchors.fill: parent
                                     radius: 15
                                     color: appItem.selectedWindow
-                                        ? "#756054"
+                                        ? root.selected
                                         : appItem.activeWindow
-                                        ? "#6552443b"
-                                        : (dockWindow.hoveredIndex === index ? "#4f443e" : "transparent")
+                                        ? root.surface
+                                        : (dockWindow.hoveredIndex === index ? root.surfaceAlt : "transparent")
 
                                     Behavior on color { ColorAnimation { duration: 120 } }
                                 }
@@ -1845,7 +1849,7 @@ ShellRoot {
                                     height: 34
                                     radius: 11
                                     visible: !dockIcon.visible
-                                    color: "#4f443e"
+                                    color: root.surfaceAlt
 
                                     Text {
                                         anchors.centerIn: parent

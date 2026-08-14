@@ -9,13 +9,15 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
-    readonly property color background: "#26201d"
-    readonly property color surface: "#372d29"
-    readonly property color surfaceAlt: "#4f443e"
-    readonly property color selected: "#756054"
-    readonly property color foreground: "#ddd3c6"
-    readonly property color muted: "#9a8b80"
-    readonly property color accent: "#b58e66"
+    Theme { id: theme }
+
+    readonly property color background: theme.background
+    readonly property color surface: theme.surface
+    readonly property color surfaceAlt: theme.surfaceAlt
+    readonly property color selected: theme.selected
+    readonly property color foreground: theme.foreground
+    readonly property color muted: theme.muted
+    readonly property color accent: theme.accent
 
     property var allItems: []
     property var results: []
@@ -153,7 +155,7 @@ ShellRoot {
 
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0.055, 0.047, 0.043, 0.42)
+            color: theme.scrim
             opacity: root.revealProgress
 
             MouseArea {
@@ -162,17 +164,21 @@ ShellRoot {
             }
 
             Rectangle {
-                anchors.top: parent.top
-                anchors.topMargin: 14
+                anchors.verticalCenter: parent.verticalCenter
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(parent.width - 48, 680)
-                height: Math.min(parent.height - 64, 420)
-                radius: 14
+                width: Math.min(parent.width - 32, 520)
+                height: Math.min(parent.height - 40,
+                    62 + Math.max(1, Math.min(root.results.length, 7)) * 41)
+                radius: 20
                 color: root.background
                 border.width: 1
-                border.color: Qt.rgba(0.46, 0.38, 0.33, 0.8)
+                border.color: theme.outline
                 opacity: root.revealProgress
-                scale: 0.985 + 0.015 * root.revealProgress
+                scale: 0.97 + 0.03 * root.revealProgress
+
+                Behavior on height {
+                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                }
 
                 MouseArea {
                     anchors.fill: parent
@@ -181,34 +187,39 @@ ShellRoot {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 8
+                    anchors.margins: 8
+                    spacing: 5
 
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 42
-                        radius: 9
-                        color: root.surfaceAlt
-                        border.width: searchField.activeFocus ? 1 : 0
-                        border.color: root.accent
+                        Layout.preferredHeight: 44
+                        radius: 13
+                        color: searchField.activeFocus ? root.surfaceAlt : root.surface
 
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 13
                             anchors.rightMargin: 13
-                            spacing: 10
+                            spacing: 9
+
+                            Text {
+                                text: "⌕"
+                                color: searchField.activeFocus ? root.accent : root.muted
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 18
+                            }
 
                             TextField {
                                 id: searchField
 
                                 Layout.fillWidth: true
                                 color: root.foreground
-                                placeholderText: "Поиск в истории буфера обмена"
+                                placeholderText: "Поиск"
                                 placeholderTextColor: root.muted
                                 selectionColor: root.selected
                                 selectedTextColor: root.foreground
-                                font.family: "Noto Sans"
-                                font.pixelSize: 16
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 13
                                 background: null
                                 onTextChanged: {
                                     root.keyboardNavigating = false
@@ -241,12 +252,6 @@ ShellRoot {
                                 }
                             }
 
-                            Text {
-                                text: root.results.length + " / " + root.allItems.length
-                                color: root.muted
-                                font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: 9
-                            }
                         }
                     }
 
@@ -257,13 +262,11 @@ ShellRoot {
 
                         Column {
                             anchors.centerIn: parent
-                            spacing: 10
-
                             Text {
-                                text: "История буфера пуста"
+                                text: "Пусто"
                                 color: root.muted
-                                font.family: "Noto Sans"
-                                font.pixelSize: 14
+                                font.family: "JetBrainsMono Nerd Font"
+                                font.pixelSize: 12
                             }
                         }
                     }
@@ -276,7 +279,7 @@ ShellRoot {
                         Layout.fillHeight: true
                         model: root.results
                         currentIndex: root.results.length > 0 ? 0 : -1
-                        spacing: 5
+                        spacing: 1
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         highlightMoveDuration: 90
@@ -298,28 +301,26 @@ ShellRoot {
                             required property int index
                             required property var modelData
                             width: resultList.width
-                            height: 44
-                            radius: 9
+                            height: 40
+                            radius: 11
                             color: resultRow.ListView.isCurrentItem || resultMouse.containsMouse
-                                ? root.selected : root.surface
-                            border.width: resultRow.ListView.isCurrentItem ? 1 : 0
-                            border.color: root.accent
+                                ? root.surfaceAlt : "transparent"
 
                             Behavior on color { ColorAnimation { duration: 90 } }
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 13
-                                anchors.rightMargin: 13
-                                spacing: 11
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
 
                                 Text {
                                     Layout.fillWidth: true
                                     text: modelData.preview
                                     color: root.foreground
                                     elide: Text.ElideRight
-                                    font.family: "Noto Sans"
-                                    font.pixelSize: 14
+                                    maximumLineCount: 1
+                                    font.family: "JetBrainsMono Nerd Font"
+                                    font.pixelSize: 12
                                 }
                             }
 
