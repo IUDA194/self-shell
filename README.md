@@ -25,6 +25,8 @@ bash -c 'set -e; if ! command -v git >/dev/null; then if command -v dnf >/dev/nu
 - устанавливает `ffmpeg-free` на Fedora для превью, OCR и мультимедиа;
 - ставит `mpvpaper`, чтобы wallpaper picker работал и с видео;
 - устанавливает JetBrainsMono Nerd Font, Fisher, Fish-плагины и TPM-плагины;
+- устанавливает SilentSDDM и собирает его оформление из текущей палитры
+  `config/quickshell/Theme.qml` и активных обоев `awww`;
 - создаёт Python-окружение для Google Calendar в dashboard;
 - подключает все конфиги симлинками и сохраняет заменённые файлы в backup;
 - делает Fish login-shell. Интерактивный Fish автоматически открывает или
@@ -50,6 +52,12 @@ SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 SELF_SHELL_SKIP_CHSH=1 ./install.sh
 ```
 
+Не устанавливать и не менять системную тему SDDM:
+
+```bash
+SELF_SHELL_SKIP_SDDM=1 ./install.sh
+```
+
 Не загружать Fisher/TPM и Python-пакеты:
 
 ```bash
@@ -73,6 +81,13 @@ SELF_SHELL_OFFLINE=1 SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 Runtime-кэш `~/.cache/awww` не переносится: он генерируется автоматически и
 может занимать сотни мегабайт. В репозитории есть стартовые обои; свои файлы
 можно положить в `~/Documents/Wallpapers`.
+
+После смены палитры или обоев обновите экран входа командой
+`self-shell-sddm-sync`. Скрипт читает активные обои из сохранённого состояния
+`awww` и копирует их внутрь системной темы,
+поскольку закрытый домашний каталог недоступен пользователю `sddm`. Перед
+перезагрузкой тему можно проверить командой
+`cd /usr/share/sddm/themes/silent && ./test.sh`.
 
 Конфиги подключаются симлинками. Изменения в `~/.config/hypr`,
 `~/.config/quickshell`, `~/.config/tmux` и остальных подключённых каталогах

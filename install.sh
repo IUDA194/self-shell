@@ -33,9 +33,10 @@ link_path() {
 install_fedora_packages() {
   local packages=(
     bash btop brightnessctl cargo curl dnf5-plugins fastfetch fd-find fish fontconfig gcc git
-    grim hyprland hyprlock hyprsunset jq kde-connect kitty libnotify lz4-devel meson mpv-devel nautilus
+    grim hyprland hyprlock hyprsunset ImageMagick jq kde-connect kitty libnotify lz4-devel meson mpv-devel nautilus
     NetworkManager neovim ninja-build pass plocate playerctl pkgconf-pkg-config
-    python3 python3-pip ripgrep rofi scdoc slurp sqlite tesseract tesseract-langpack-eng
+    python3 python3-pip qt6-qtimageformats qt6-qtmultimedia qt6-qtsvg qt6-qtvirtualkeyboard
+    ripgrep rofi scdoc sddm slurp sqlite tesseract tesseract-langpack-eng
     tesseract-langpack-rus tmux wayland-devel
     wayland-protocols-devel wf-recorder wireplumber wl-clipboard wtype xdg-utils
     xz zoxide
@@ -77,9 +78,10 @@ install_quickshell_fedora() {
 install_arch_packages() {
   local packages=(
     awww bash btop brightnessctl curl fastfetch fd fish fontconfig gcc git
-    grim hyprland hyprlock hyprsunset jq kdeconnect kitty libnotify meson mpv nautilus networkmanager
-    neovim ninja pass plocate playerctl python ripgrep rofi slurp sqlite tesseract
+    grim hyprland hyprlock hyprsunset imagemagick jq kdeconnect kitty libnotify meson mpv nautilus networkmanager
+    neovim ninja pass plocate playerctl python ripgrep rofi sddm slurp sqlite tesseract
     tesseract-data-eng tesseract-data-rus tmux
+    qt6-imageformats qt6-multimedia qt6-svg qt6-virtualkeyboard
     wf-recorder wireplumber wl-clipboard wtype xdg-utils xz zoxide quickshell
   )
   sudo pacman -S --needed --noconfirm "${packages[@]}"
@@ -227,6 +229,11 @@ link_path "$repo_dir/assets/wallpapers/wallpeper.jpg" \
 if [[ ! -e "$HOME/Documents/Wallpapers/wallpeper.jpg" ]]; then
   link_path "$repo_dir/assets/wallpapers/wallpeper.jpg" \
     "$HOME/Documents/Wallpapers/wallpeper.jpg"
+fi
+
+if [[ "${SELF_SHELL_SKIP_SDDM:-0}" != 1 && "${SELF_SHELL_OFFLINE:-0}" != 1 ]]; then
+  log 'Installing and syncing SilentSDDM'
+  "$repo_dir/bin/self-shell-sddm-sync"
 fi
 
 if [[ "${SELF_SHELL_OFFLINE:-0}" != 1 ]]; then

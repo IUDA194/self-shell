@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_path="$(readlink -f -- "${BASH_SOURCE[0]}")"
+repo_dir="$(cd -- "$(dirname -- "$script_path")/.." && pwd)"
+palette_file="$repo_dir/config/quickshell/Theme.qml"
+fallback_wallpaper="$repo_dir/assets/wallpapers/wallpeper.jpg"
+silent_commit="0dc4386ef570659537b480f4b226b3b6f2699948"
+theme_dir="/usr/share/sddm/themes/silent"
+
+color() {
+  local name="$1"
+  sed -nE "s/.*property color ${name}: \"(#[[:xdigit:]]{6})\".*/\1/p" "$palette_file" | head -n 1
+}
+
+wallpaper=''
+awww_cache="${XDG_CACHE_HOME:-$HOME/.cache}/awww"
+while IFS= read -r -d '' cache_entry; do
+  cache_file="${cache_entry#* }"
+  candidate="$(tr '\0' '\n' < "$cache_file" | tail -n 1)"
+  if [[ -f "$candidate" ]]; then
+    wallpaper="$candidate"
+    break
+  fi
+done < <(find "$awww_cache" -type f -printf '%T@ %p\0' 2>/dev/null | sort -zrn)
+
+if [[ -z "$wallpaper" ]]; then
+  waypaper_file="$repo_dir/config/waypaper/config.ini"
+  wallpaper="$(sed -nE 's/^[[:space:]]*wallpaper[[:space:]]*=[[:space:]]*(.*)$/\1/p' "$waypaper_file" | tail -n 1)"
+  if [[ "$wallpaper" == '~/'* ]]; then
+    wallpaper="$HOME/${wallpaper#\~/}"
+  fi
+fi
+[[ -f "$wallpaper" ]] || wallpaper="$fallback_wallpaper"
+
+background="$(color background)"
+surface="$(color surface)"
+surface_alt="$(color surfaceAlt)"
+selected="$(color selected)"
+foreground="$(color foreground)"
+foreground_soft="$(color foregroundSoft)"
+muted="$(color muted)"
+accent="$(color accent)"
+accent_hover="$(color accentHover)"
+
+for value in "$background" "$surface" "$surface_alt" "$selected" \
+  "$foreground" "$foreground_soft" "$muted" "$accent" "$accent_hover"; do
+  if [[ ! "$value" =~ ^#[[:xdigit:]]{6}$ ]]; then
+    printf 'Could not read the self-shell palette from %s\n' "$palette_file" >&2
+    exit 1
+  fi
+done
+
+work_dir="$(mktemp -d)"
+trap 'rm -rf -- "$work_dir"' EXIT
+
+git clone --quiet https://github.com/uiriansan/SilentSDDM.git "$work_dir/silent"
+git -C "$work_dir/silent" checkout --quiet "$silent_commit"
+
+wallpaper_name="self-shell-wallpaper.${wallpaper##*.}"
+cp -- "$wallpaper" "$work_dir/silent/backgrounds/$wallpaper_name"
+cp -- "$work_dir/silent/configs/gruvbox.conf" "$work_dir/silent/configs/self-shell.conf"
+
+sed -i \
+  -e 's|^scale = 1.0$|scale = 1.36|' \
+  -e "s|background = \"\"|background = \"$wallpaper_name\"|g" \
+  -e 's|use-background-color = true|use-background-color = false|g' \
+  -e 's|^blur = 32$|blur = 0|' \
+  -e 's|^blur = 16$|blur = 0|' \
+  -e 's|^width = 200$|width = 300|' \
+  -e 's|^height = 30$|height = 48|' \
+  -e 's|^size = 30$|size = 50|' \
+  -e 's|^icon-size = 18$|icon-size = 28|' \
+  -e 's|^button-width = 300$|button-width = 50|' \
+  -e 's|^popup-width = 300$|popup-width = 220|' \
+  -e 's|^border-radius = 5$|border-radius = 12|' \
+  -e 's|^background-opacity = 0.75$|background-opacity = 0.88|' \
+  -e 's|^display-layout-name = true$|display-layout-name = false|' \
+  -e "s|#282828|$background|g" \
+  -e "s|#3c3836|$surface|g" \
+  -e "s|#504945|$surface_alt|g" \
+  -e "s|#665c54|$selected|g" \
+  -e "s|#ebdbb2|$foreground|g" \
+  -e "s|#fbf1c7|$foreground_soft|g" \
+  -e "s|#98971a|$accent|g" \
+  -e "s|#b8bb26|$accent_hover|g" \
+  -e "s|#d79921|$muted|g" \
+  -e "s|#fabd2f|$accent_hover|g" \
+  "$work_dir/silent/configs/self-shell.conf"
+
+sed -i \
+  's|^ConfigFile=.*|ConfigFile=configs/self-shell.conf|' \
+  "$work_dir/silent/metadata.desktop"
+
+sudo install -d "$theme_dir" /etc/sddm.conf.d /usr/share/fonts/RedHatDisplay
+sudo cp -a "$work_dir/silent/." "$theme_dir/"
+sudo cp -a "$work_dir/silent/fonts/." /usr/share/fonts/RedHatDisplay/
+sudo tee /etc/sddm.conf.d/self-shell.conf >/dev/null <<'EOF'
+[General]
+InputMethod=qtvirtualkeyboard
+GreeterEnvironment=QML2_IMPORT_PATH=/usr/share/sddm/themes/silent/components/,QT_IM_MODULE=qtvirtualkeyboard
+
+[Theme]
+Current=silent
+EOF
+
+printf 'SilentSDDM synced with %s and the self-shell palette.\n' "$wallpaper"
+printf 'Test before rebooting: cd %s && ./test.sh\n' "$theme_dir"
