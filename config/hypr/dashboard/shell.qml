@@ -337,7 +337,7 @@ ShellRoot {
                     context.lineTo(width, height)
                     context.lineTo(startX, height)
                     context.closePath()
-                    context.fillStyle = Qt.rgba(0.71, 0.56, 0.40, 0.16)
+                    context.fillStyle = theme.accentSubtle
                     context.fill()
 
                     context.beginPath()
@@ -356,7 +356,7 @@ ShellRoot {
                 const context = getContext("2d")
                 context.clearRect(0, 0, width, height)
                 context.lineWidth = 1
-                context.strokeStyle = Qt.rgba(0.61, 0.55, 0.50, 0.18)
+                context.strokeStyle = theme.faint
                 for (let i = 1; i < 4; ++i) {
                     context.beginPath()
                     context.moveTo(0, height * i / 4)
@@ -526,7 +526,7 @@ ShellRoot {
                     bottomRightRadius: 26
                     color: root.background
                     border.width: 1
-                    border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                    border.color: theme.outline
                     clip: true
                     opacity: 1
                     scale: 1
@@ -643,7 +643,7 @@ ShellRoot {
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 1
-                            color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                            color: theme.outline
                         }
 
                         Item {
@@ -677,7 +677,7 @@ ShellRoot {
                                         radius: 20
                                         color: root.surface
                                         border.width: 1
-                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                                        border.color: theme.outline
 
                                         ColumnLayout {
                                             anchors.fill: parent
@@ -818,7 +818,7 @@ ShellRoot {
                                             radius: 20
                                             color: root.surface
                                             border.width: 1
-                                            border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                                            border.color: theme.outline
                                             clip: true
 
                                             ColumnLayout {
@@ -852,7 +852,7 @@ ShellRoot {
                                                 Rectangle {
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: 1
-                                                    color: Qt.rgba(0.61, 0.55, 0.50, 0.18)
+                                                    color: theme.faint
                                                 }
 
                                                 Text {
@@ -909,7 +909,7 @@ ShellRoot {
                                                 radius: 20
                                                 color: root.surface
                                                 border.width: 1
-                                                border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                                                border.color: theme.outline
 
                                                 ColumnLayout {
                                                     anchors.fill: parent
@@ -973,7 +973,7 @@ ShellRoot {
                                                         radius: 18
                                                         color: root.surface
                                                         border.width: 1
-                                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                                                        border.color: theme.outline
 
                                                         Column {
                                                             anchors.centerIn: parent
@@ -1016,7 +1016,7 @@ ShellRoot {
                                         radius: 20
                                         color: root.surface
                                         border.width: 1
-                                        border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                                        border.color: theme.outline
 
                                         RowLayout {
                                             anchors.fill: parent
@@ -1160,7 +1160,7 @@ ShellRoot {
                                     radius: 20
                                     color: root.surface
                                     border.width: 1
-                                    border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                                    border.color: theme.outline
                                     clip: true
 
                                     Text {
@@ -1377,7 +1377,7 @@ ShellRoot {
                                                     Layout.preferredHeight: 36
                                                     radius: 11
                                                     color: streamRow.streamNode.audio && streamRow.streamNode.audio.muted
-                                                        ? Qt.rgba(0.77, 0.36, 0.34, 0.28) : root.surfaceAlt
+                                                        ? theme.criticalSubtle : root.surfaceAlt
 
                                                     Text {
                                                         anchors.centerIn: parent
@@ -1759,7 +1759,7 @@ ShellRoot {
                     radius: 22
                     color: root.background
                     border.width: 1
-                    border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                    border.color: theme.outline
                     clip: true
 
                     Behavior on width {

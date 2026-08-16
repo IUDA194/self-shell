@@ -156,7 +156,7 @@ ShellRoot {
 
             Rectangle {
                 anchors.fill: parent
-                color: "#080706"
+                color: theme.background
                 opacity: shell.revealProgress
 
                 Image {
@@ -184,7 +184,7 @@ ShellRoot {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: "#240b0908"
+                    color: theme.scrim
                 }
 
                 MouseArea {
@@ -200,9 +200,9 @@ ShellRoot {
                     width: Math.min(parent.width - 72, 1120)
                     height: 188
                     radius: 19
-                    color: "#ed26201d"
+                    color: theme.overlayStrong
                     border.width: 1
-                    border.color: "#806d5a4f"
+                    border.color: theme.outline
                     opacity: shell.revealProgress
                     scale: 0.96 + shell.revealProgress * 0.04
                     clip: true
@@ -256,7 +256,7 @@ ShellRoot {
                                     radius: 12
                                     color: shell.surface
                                     border.width: cardContainer.ListView.isCurrentItem ? 2 : 1
-                                    border.color: cardContainer.ListView.isCurrentItem ? shell.accent : "#66564b44"
+                                    border.color: cardContainer.ListView.isCurrentItem ? shell.accent : theme.outline
                                     clip: true
 
                                     Image {
@@ -272,7 +272,7 @@ ShellRoot {
                                     Rectangle {
                                         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                                         height: 31
-                                        color: "#c9221c19"
+                                        color: theme.overlay
                                     }
 
                                     Text {
@@ -296,7 +296,7 @@ ShellRoot {
                                         width: typeLabel.implicitWidth + 13
                                         height: 22
                                         radius: 7
-                                        color: "#da211b18"
+                                        color: theme.overlayStrong
                                         border.width: 1
                                         border.color: shell.accent
 
@@ -355,7 +355,7 @@ ShellRoot {
                                         anchors.fill: parent
                                         verticalAlignment: TextInput.AlignVCenter
                                         color: shell.foreground
-                                        selectionColor: "#756054"
+                                        selectionColor: theme.selected
                                         selectedTextColor: shell.foreground
                                         font.family: "JetBrainsMono Nerd Font"
                                         font.pixelSize: 11
@@ -399,7 +399,7 @@ ShellRoot {
                         anchors.fill: parent
                         visible: shell.applying
                         radius: picker.radius
-                        color: "#d826201d"
+                        color: theme.overlayStrong
 
                         Row {
                             anchors.centerIn: parent
@@ -440,7 +440,7 @@ ShellRoot {
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
                     style: Text.Outline
-                    styleColor: "#b0000000"
+                    styleColor: theme.shadow
                     opacity: shell.revealProgress
                 }
             }

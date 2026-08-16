@@ -321,6 +321,12 @@ ShellRoot {
                     }
                 }
 
+                Connections {
+                    target: theme
+                    function onBackgroundChanged() { sidebarSurface.requestPaint() }
+                    function onOutlineChanged() { sidebarSurface.requestPaint() }
+                }
+
                 onPaint: {
                     const ctx = getContext("2d")
                     const h = height
@@ -369,7 +375,7 @@ ShellRoot {
                     ctx.fillStyle = theme.background
                     ctx.fill()
                     ctx.lineWidth = 1.25
-                    ctx.strokeStyle = "rgba(117, 97, 84, 0.72)"
+                    ctx.strokeStyle = theme.outline
 
                     if (connectivityPanel.closing) {
                         // Crossfade from the expanded outline to the static
@@ -411,7 +417,7 @@ ShellRoot {
                 // Content-only rail: sidebarSurface owns the one shared shape.
                 color: "transparent"
                 border.width: 0
-                border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+                border.color: theme.outline
 
                 // Workspaces stay compact: Quickshell only exposes workspaces that exist.
                 Column {
@@ -434,7 +440,7 @@ ShellRoot {
                                 width: 32
                                 height: 28
                                 radius: 6
-                                color: workspaceMouse.containsMouse ? "#403934" : "transparent"
+                                color: workspaceMouse.containsMouse ? theme.hover : "transparent"
                             }
 
                             Text {

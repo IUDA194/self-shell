@@ -5,6 +5,7 @@ set -euo pipefail
 videos="${HOME}/Videos"
 state_dir="${XDG_RUNTIME_DIR:-/tmp}/self-shell-command-center"
 recording_state="$state_dir/recording"
+night_state="$state_dir/night-light"
 mkdir -p "$videos"
 mkdir -p "$state_dir"
 
@@ -15,10 +16,12 @@ remember_recording() {
 
 case "${1:-}" in
   night-light)
-    if pgrep -x hyprsunset >/dev/null; then
-      pkill -TERM -x hyprsunset
-    elif command -v hyprsunset >/dev/null; then
-      hyprsunset -t 4500 </dev/null >/dev/null 2>&1 &
+    if [[ -e "$night_state" ]]; then
+      hyprctl hyprsunset temperature 6000 >/dev/null
+      rm -f "$night_state"
+    elif "$HOME/.config/hypr/brightness.sh" ensure; then
+      hyprctl hyprsunset temperature 4500 >/dev/null
+      : >"$night_state"
     else
       notify-send "Night Light" "Установите пакет hyprsunset"
     fi

@@ -1,4 +1,5 @@
 Theme 1.0 Theme.qml
+ThemedToolTip 1.0 ThemedToolTip.qml
 BarButton 1.0 BarButton.qml
 ConnectivityMenu 1.0 ConnectivityMenu.qml
 NotificationCard 1.0 NotificationCard.qml

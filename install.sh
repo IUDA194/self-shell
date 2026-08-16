@@ -164,6 +164,26 @@ install_calendar_environment() {
     google-api-python-client google-auth-httplib2 google-auth-oauthlib
 }
 
+sync_nvim_config() {
+  local nvim_repo='git@github.com:IUDA194/nvim.git'
+  local nvim_dir="$HOME/.local/share/self-shell/nvim"
+
+  if [[ -d "$nvim_dir/.git" ]]; then
+    git -C "$nvim_dir" remote set-url origin "$nvim_repo"
+    git -C "$nvim_dir" checkout main
+    git -C "$nvim_dir" pull --ff-only origin main
+    return
+  fi
+
+  if [[ -e "$nvim_dir" ]]; then
+    local stale_dir="${nvim_dir}.backup-$(date +%Y%m%d-%H%M%S)"
+    mv -- "$nvim_dir" "$stale_dir"
+    printf 'backup  %s\n' "$stale_dir"
+  fi
+
+  git clone --branch main "$nvim_repo" "$nvim_dir"
+}
+
 install_nautilus_config() {
   if ! command -v dconf >/dev/null 2>&1; then
     printf 'warning dconf is unavailable; skipped Nautilus settings\n' >&2
@@ -205,9 +225,13 @@ if [[ "${SELF_SHELL_SKIP_PACKAGES:-0}" != 1 ]]; then
 fi
 
 log 'Linking the complete configuration'
-for name in fish kitty tmux nvim fastfetch btop quickshell hypr waypaper; do
+for name in fish kitty tmux fastfetch btop quickshell hypr waypaper; do
   link_path "$repo_dir/config/$name" "$HOME/.config/$name"
 done
+
+log 'Syncing Neovim configuration from IUDA194/nvim'
+sync_nvim_config
+link_path "$HOME/.local/share/self-shell/nvim" "$HOME/.config/nvim"
 
 for name in .tmux.conf .gitconfig; do
   link_path "$repo_dir/home/$name" "$HOME/$name"
@@ -223,6 +247,9 @@ mkdir -p "$HOME/.local/bin" "$HOME/.local/share/self-shell/wallpapers" "$HOME/Do
 for script in "$repo_dir"/bin/*; do
   link_path "$script" "$HOME/.local/bin/$(basename -- "$script")"
 done
+mkdir -p "$HOME/.local/share/nvim/site/plugin"
+link_path "$repo_dir/config/nvim/self-shell-theme.lua" \
+  "$HOME/.local/share/nvim/site/plugin/self-shell-theme.lua"
 link_path "$repo_dir/assets/wallpapers/wallpeper.jpg" \
   "$HOME/.local/share/self-shell/wallpapers/wallpeper.jpg"
 

@@ -27,11 +27,15 @@ ShellRoot {
     readonly property var trackedAudio: [Pipewire.defaultAudioSink, Pipewire.defaultAudioSource]
         .concat(outputStreams).concat(inputStreams).filter(node => node)
     property int brightness: 0
+    property bool brightnessAvailable: false
+    property string brightnessBackend: ""
+    property string brightnessDevice: ""
     property bool nightLight: false
     property bool recording: false
     property string recordingStarted: ""
     property string recordingElapsed: "00:00"
     property string recordingSize: "0 Б"
+    property string recordingFile: ""
     property var recentFiles: []
     property var notifications: []
     property bool notificationDnd: false
@@ -59,8 +63,19 @@ ShellRoot {
 
     Process {
         id: brightnessRead
-        command: ["bash", "-lc", "brightnessctl -m 2>/dev/null | awk -F, '{gsub(/%/,\"\",$4); print $4}'"]
-        stdout: StdioCollector { onStreamFinished: root.brightness = Number(text.trim()) || 0 }
+        command: ["bash", Quickshell.env("HOME") + "/.config/hypr/brightness.sh", "read"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const fields = text.trim().split("\t")
+                const value = Number(fields[2])
+                root.brightnessAvailable = fields.length === 3 && Number.isFinite(value)
+                if (root.brightnessAvailable) {
+                    root.brightnessBackend = fields[0]
+                    root.brightnessDevice = fields[1]
+                    root.brightness = value
+                }
+            }
+        }
     }
 
     Process {
@@ -70,7 +85,7 @@ ShellRoot {
 
     Process {
         id: stateRead
-        command: ["bash", "-lc", "pgrep -x hyprsunset >/dev/null && n=1 || n=0; pgrep -x wf-recorder >/dev/null && r=1 || r=0; printf '%s %s' \"$n\" \"$r\""]
+        command: ["bash", "-lc", "test -e \"${XDG_RUNTIME_DIR:-/tmp}/self-shell-command-center/night-light\" && n=1 || n=0; pgrep -x wf-recorder >/dev/null && r=1 || r=0; printf '%s %s' \"$n\" \"$r\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 const fields = text.trim().split(/\s+/)
@@ -114,6 +129,7 @@ ShellRoot {
                 root.recordingSize = bytes >= 1048576
                     ? (bytes / 1048576).toFixed(1) + " МБ"
                     : Math.round(bytes / 1024) + " КБ"
+                root.recordingFile = fields[3] || ""
             }
         }
     }
@@ -788,48 +804,171 @@ ShellRoot {
                                     Rectangle {
                                         Layout.fillWidth: true; Layout.preferredHeight: 100; radius: 18; color: root.surface
                                         ColumnLayout { anchors.fill: parent; anchors.margins: 15
-                                            RowLayout { Layout.fillWidth: true; Text { text: "󰃠  Яркость"; color: root.foreground; font.family: "JetBrainsMono Nerd Font" } Item { Layout.fillWidth: true } Text { text: root.brightness + "%"; color: root.accent; font.family: "JetBrainsMono Nerd Font" } }
-                                            StyledSlider { Layout.fillWidth: true; from: 1; to: 100; value: root.brightness; onPressedChanged: window.controlActive = pressed; onMoved: { root.brightness = Math.round(value); brightnessWrite.exec(["brightnessctl", "set", root.brightness + "%"]) } }
+                                            RowLayout { Layout.fillWidth: true; Text { text: "󰃠  Яркость"; color: root.foreground; font.family: "JetBrainsMono Nerd Font" } Item { Layout.fillWidth: true } Text { text: root.brightnessAvailable ? root.brightness + "%" : "Недоступно"; color: root.brightnessAvailable ? root.accent : root.muted; font.family: "JetBrainsMono Nerd Font" } }
+                                            StyledSlider {
+                                                Layout.fillWidth: true
+                                                enabled: root.brightnessAvailable
+                                                from: 1
+                                                to: 100
+                                                value: root.brightnessAvailable ? root.brightness : 1
+                                                onPressedChanged: {
+                                                    window.controlActive = pressed
+                                                    if (!pressed) {
+                                                        brightnessWrite.exec(["bash", Quickshell.env("HOME") + "/.config/hypr/brightness.sh", "set", root.brightnessBackend, root.brightnessDevice, String(root.brightness)])
+                                                    }
+                                                }
+                                                onMoved: {
+                                                    root.brightness = Math.round(value)
+                                                    if (root.brightnessBackend === "gamma") {
+                                                        Quickshell.execDetached(["hyprctl", "hyprsunset", "gamma", String(root.brightness)])
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                     GridLayout {
                                         Layout.fillWidth: true
-                                        columns: 3
-                                        columnSpacing: 10
-                                        rowSpacing: 10
+                                        columns: 4
+                                        columnSpacing: 6
+                                        rowSpacing: 6
                                         Repeater {
                                             model: [
                                                 {icon:"󰖔", title:"Night Light", status:root.nightLight ? "Включён" : "Выключен", active:root.nightLight, action:"night"},
                                                 {icon:"󰑋", title:root.recording ? root.recordingElapsed : "Запись", status:root.recording ? root.recordingSize + " · нажмите для остановки" : "Не активна", active:root.recording, action:"record"},
                                                 {icon:"󰹑", title:"Область", status:"Выбрать область", active:false, action:"region"},
                                                 {icon:"󰈊", title:"Пипетка", status:"Копирует HEX", active:false, action:"color"},
-                                                {icon:"󰐕", title:"OCR", status:"Распознать текст", active:false, action:"ocr"}
+                                                {icon:"󰐕", title:"OCR", status:"Распознать текст", active:false, action:"ocr"},
+                                                {icon:"󰅶", title:"Кофеин", status:"Не давать экрану гаснуть", active:false, action:"caffeine"},
+                                                {icon:"󰺵", title:"Игровой режим", status:"Gamemode", active:false, action:"gamemode"}
                                             ]
                                             delegate: Rectangle {
                                                 id: actionButton
                                                 required property var modelData
+                                                readonly property bool recordingExpanded: modelData.action === "record" && root.recording
                                                 Layout.fillWidth: true
-                                                Layout.columnSpan: modelData.action === "record" && root.recording ? 2 : 1
-                                                Layout.preferredHeight: 92
-                                                radius: 18
+                                                Layout.columnSpan: recordingExpanded ? 2 : 1
+                                                Layout.preferredHeight: recordingExpanded ? 112 : 100
+                                                Behavior on Layout.preferredHeight {
+                                                    NumberAnimation { duration: 320; easing.type: Easing.OutBack }
+                                                }
+                                                radius: 11
                                                 color: modelData.active
-                                                    ? (actionMouse.containsMouse ? theme.selected : root.surfaceAlt)
-                                                    : (actionMouse.containsMouse ? root.surfaceAlt : root.surface)
+                                                    ? (actionMouse.containsMouse ? Qt.alpha(root.accent, 0.30) : Qt.alpha(root.accent, 0.20))
+                                                    : (actionMouse.containsMouse ? root.surfaceAlt : "transparent")
                                                 border.width: 1
-                                                border.color: modelData.active ? root.accent : theme.outline
+                                                border.color: modelData.active
+                                                    ? Qt.alpha(root.accent, 0.85)
+                                                    : (actionMouse.containsMouse ? root.accent : theme.outline)
                                                 Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
-                                                Behavior on border.color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
-                                                Column { anchors.centerIn: parent; spacing: 5
-                                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.icon; color: modelData.active ? root.accent : root.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 22 }
-                                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.title; color: root.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 9; font.weight: Font.DemiBold }
-                                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.status; color: modelData.active ? root.accent : root.muted; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 7 }
+                                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                                                Text {
+                                                    visible: !actionButton.recordingExpanded
+                                                    opacity: actionButton.recordingExpanded ? 0 : 1
+                                                    anchors.centerIn: parent
+                                                    text: modelData.icon
+                                                    color: modelData.active ? root.accent : (actionMouse.containsMouse ? root.accent : root.foreground)
+                                                    font.family: "JetBrainsMono Nerd Font"
+                                                    font.pixelSize: 32
+                                                    font.weight: Font.Bold
+                                                    scale: actionMouse.pressed ? 0.88 : (actionMouse.containsMouse ? 1.10 : 1)
+                                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+                                                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                                                }
+                                                RowLayout {
+                                                    visible: opacity > 0
+                                                    opacity: actionButton.recordingExpanded ? 1 : 0
+                                                    scale: actionButton.recordingExpanded ? 1 : 0.94
+                                                    anchors.fill: parent
+                                                    anchors.leftMargin: 18
+                                                    anchors.rightMargin: 18
+                                                    spacing: 14
+                                                    Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                                                    Behavior on scale { NumberAnimation { duration: 340; easing.type: Easing.OutBack } }
+
+                                                    Rectangle {
+                                                        Layout.preferredWidth: 48
+                                                        Layout.preferredHeight: 48
+                                                        radius: 24
+                                                        color: Qt.alpha(root.accent, 0.18)
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: "󰑋"
+                                                            color: root.accent
+                                                            font.family: "JetBrainsMono Nerd Font"
+                                                            font.pixelSize: 25
+                                                        }
+                                                    }
+
+                                                    ColumnLayout {
+                                                        Layout.fillWidth: true
+                                                        spacing: 3
+                                                        RowLayout {
+                                                            Layout.fillWidth: true
+                                                            spacing: 7
+                                                            Rectangle {
+                                                                width: 8
+                                                                height: 8
+                                                                radius: 4
+                                                                color: root.critical
+                                                                SequentialAnimation on opacity {
+                                                                    running: actionButton.recordingExpanded
+                                                                    loops: Animation.Infinite
+                                                                    NumberAnimation { to: 0.35; duration: 650 }
+                                                                    NumberAnimation { to: 1; duration: 650 }
+                                                                }
+                                                            }
+                                                            Text {
+                                                                text: "ИДЁТ ЗАПИСЬ"
+                                                                color: root.critical
+                                                                font.family: "JetBrainsMono Nerd Font"
+                                                                font.pixelSize: 10
+                                                                font.weight: Font.Bold
+                                                            }
+                                                            Item { Layout.fillWidth: true }
+                                                            Text {
+                                                                text: root.recordingElapsed
+                                                                color: root.foreground
+                                                                font.family: "JetBrainsMono Nerd Font"
+                                                                font.pixelSize: 20
+                                                                font.weight: Font.Bold
+                                                            }
+                                                        }
+                                                        Text {
+                                                            Layout.fillWidth: true
+                                                            text: "MP4  ·  " + root.recordingSize
+                                                            color: root.foreground
+                                                            font.family: "JetBrainsMono Nerd Font"
+                                                            font.pixelSize: 11
+                                                        }
+                                                        Text {
+                                                            Layout.fillWidth: true
+                                                            text: root.recordingFile ? root.recordingFile.split("/").pop() : "Файл подготавливается…"
+                                                            color: root.muted
+                                                            font.family: "JetBrainsMono Nerd Font"
+                                                            font.pixelSize: 9
+                                                            elide: Text.ElideMiddle
+                                                        }
+                                                        Text {
+                                                            text: "Нажмите, чтобы остановить и сохранить"
+                                                            color: root.accent
+                                                            font.family: "JetBrainsMono Nerd Font"
+                                                            font.pixelSize: 9
+                                                        }
+                                                    }
+                                                }
+                                                ThemedToolTip {
+                                                    target: actionButton
+                                                    labelText: actionButton.modelData.title + " — " + actionButton.modelData.status
+                                                    shown: actionMouse.containsMouse
+                                                    placement: "bottom"
                                                 }
                                                 MouseArea { id: actionMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
                                                     if (modelData.action === "night") actionProcess.exec([Quickshell.env("HOME") + "/.config/hypr/command-center-action.sh", "night-light"])
                                                     else if (modelData.action === "record") actionProcess.exec([Quickshell.env("HOME") + "/.config/hypr/command-center-action.sh", root.recording ? "stop-record" : "record"])
                                                     else if (modelData.action === "region") { window.revealStage = 0; actionProcess.exec([Quickshell.env("HOME") + "/.config/hypr/command-center-action.sh", "record-region"]) }
                                                     else if (modelData.action === "color") { window.revealStage = 0; pickerProcess.running = true }
-                                                    else {
+                                                    else if (modelData.action === "ocr") {
                                                         window.revealStage = 0
                                                         Quickshell.execDetached([
                                                             Quickshell.env("HOME") + "/.config/hypr/command-center-action.sh",
@@ -1021,6 +1160,74 @@ ShellRoot {
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        delegate: Component {
+            PanelWindow {
+                id: recordingIndicatorWindow
+                required property var modelData
+
+                screen: modelData
+                anchors.top: true
+                anchors.left: true
+                anchors.right: true
+                implicitHeight: 52
+                color: "transparent"
+                exclusionMode: ExclusionMode.Ignore
+                mask: Region {}
+                WlrLayershell.layer: WlrLayer.Overlay
+
+                Item {
+                    anchors.right: parent.right
+                    anchors.rightMargin: -6
+                    y: root.recording ? -6 : -30
+                    width: 30
+                    height: 30
+                    opacity: root.recording ? 1 : 0
+                    scale: root.recording ? 1 : 0.65
+
+                    Behavior on y { NumberAnimation { duration: 360; easing.type: Easing.OutBack } }
+                    Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: 380; easing.type: Easing.OutBack } }
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 24
+                        height: 24
+                        radius: 12
+                        color: Qt.alpha(theme.accent, 0.18)
+                        border.width: 1
+                        border.color: Qt.alpha(theme.accent, 0.42)
+
+                        SequentialAnimation on scale {
+                            running: root.recording
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 1.28; duration: 760; easing.type: Easing.OutCubic }
+                            NumberAnimation { to: 1; duration: 760; easing.type: Easing.InCubic }
+                        }
+                        SequentialAnimation on opacity {
+                            running: root.recording
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 0.35; duration: 760; easing.type: Easing.OutCubic }
+                            NumberAnimation { to: 1; duration: 760; easing.type: Easing.InCubic }
+                        }
+                    }
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 9
+                        height: 9
+                        radius: 4.5
+                        color: theme.accent
+                        border.width: 1
+                        border.color: Qt.lighter(theme.accent, 1.35)
                     }
                 }
             }

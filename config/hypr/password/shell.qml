@@ -162,7 +162,7 @@ ShellRoot {
 
         Rectangle {
             anchors.fill: parent
-            color: "#a80b0908"
+            color: theme.scrim
             opacity: root.revealProgress
 
             MouseArea {
@@ -178,7 +178,7 @@ ShellRoot {
                 radius: 18
                 color: root.background
                 border.width: 1
-                border.color: "#82746961"
+                border.color: theme.outline
                 opacity: root.revealProgress
                 scale: 0.975 + 0.025 * root.revealProgress
 
@@ -198,7 +198,7 @@ ShellRoot {
                             Layout.preferredWidth: 40
                             Layout.preferredHeight: 40
                             radius: 12
-                            color: "#35b58e66"
+                            color: theme.accentSubtle
 
                             Text {
                                 anchors.centerIn: parent
@@ -241,7 +241,7 @@ ShellRoot {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 48
                         radius: 12
-                        color: "#b1423832"
+                        color: theme.overlay
                         border.width: searchField.activeFocus ? 1 : 0
                         border.color: root.accent
 
@@ -264,7 +264,7 @@ ShellRoot {
                                 color: root.foreground
                                 placeholderText: "Найти запись"
                                 placeholderTextColor: root.muted
-                                selectionColor: "#756054"
+                                selectionColor: theme.selected
                                 selectedTextColor: root.foreground
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: 13
@@ -348,7 +348,7 @@ ShellRoot {
                                     Layout.preferredWidth: 34
                                     Layout.preferredHeight: 34
                                     radius: 10
-                                    color: "#2eb58e66"
+                                    color: theme.accentSubtle
 
                                     Text {
                                         anchors.centerIn: parent
@@ -408,7 +408,7 @@ ShellRoot {
                                 width: 34
                                 height: 34
                                 radius: 10
-                                color: autotypeMouse.containsMouse ? "#55b58e66" : "transparent"
+                                color: autotypeMouse.containsMouse ? theme.accentHoverSubtle : "transparent"
                                 z: 2
 
                                 Behavior on color { ColorAnimation { duration: 100 } }

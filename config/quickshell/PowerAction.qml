@@ -3,6 +3,8 @@ import QtQuick
 Item {
     id: root
 
+    Theme { id: theme }
+
     property string icon: ""
     property string title: ""
     property bool destructive: false
@@ -20,7 +22,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 16
-        color: mouse.containsMouse ? "#a159493c" : "#70312925"
+        color: mouse.containsMouse ? theme.accentHoverSubtle : theme.accentSubtle
 
         Behavior on color { ColorAnimation { duration: 140 } }
     }
@@ -32,7 +34,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.icon
-            color: "#c9a06d"
+            color: root.destructive ? theme.critical : theme.accentHover
             font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 24
             font.weight: Font.DemiBold
@@ -41,7 +43,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.title
-            color: "#e0d6ca"
+            color: theme.foreground
             font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 13
             font.weight: Font.Bold

@@ -4,12 +4,17 @@ set -euo pipefail
 script_path="$(readlink -f -- "${BASH_SOURCE[0]}")"
 repo_dir="$(cd -- "$(dirname -- "$script_path")/.." && pwd)"
 palette_file="$repo_dir/config/quickshell/Theme.qml"
+active_palette="${XDG_CACHE_HOME:-$HOME/.cache}/self-shell/active-palette.json"
 fallback_wallpaper="$repo_dir/assets/wallpapers/wallpeper.jpg"
 silent_commit="0dc4386ef570659537b480f4b226b3b6f2699948"
 theme_dir="/usr/share/sddm/themes/silent"
 
 color() {
   local name="$1"
+  if [[ -s "$active_palette" ]]; then
+    jq -r --arg name "$name" '.colors[$name] // empty' "$active_palette"
+    return
+  fi
   sed -nE "s/.*property color ${name}: \"(#[[:xdigit:]]{6})\".*/\1/p" "$palette_file" | head -n 1
 }
 

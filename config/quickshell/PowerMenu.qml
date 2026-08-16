@@ -5,6 +5,8 @@ import Quickshell.Wayland
 PanelWindow {
     id: window
 
+    Theme { id: theme }
+
     property string pendingAction: ""
     property real revealProgress: 0
     property bool animateReveal: false
@@ -76,7 +78,7 @@ PanelWindow {
 
         Rectangle {
             anchors.fill: parent
-            color: "#b50b0908"
+            color: theme.scrim
             opacity: window.revealProgress
 
             MouseArea {
@@ -149,7 +151,7 @@ PanelWindow {
                     text: window.pendingAction === "reboot"
                         ? "Перезагрузить компьютер?"
                         : "Выключить компьютер?"
-                    color: "#e3d9cd"
+                    color: theme.foreground
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 18
                     font.weight: Font.Bold

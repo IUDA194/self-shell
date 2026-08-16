@@ -109,7 +109,7 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: "#730b0908"
+        color: theme.scrim
         opacity: window.revealProgress
 
         MouseArea {
@@ -127,7 +127,7 @@ PanelWindow {
             radius: 28
             color: window.background
             border.width: 1
-            border.color: Qt.rgba(0.46, 0.38, 0.33, 0.72)
+            border.color: theme.outline
             opacity: window.revealProgress
             transform: Translate { x: 32 * (1 - window.revealProgress) }
 
@@ -170,8 +170,8 @@ PanelWindow {
                         Layout.preferredHeight: 38
                         radius: 19
                         color: window.grouped
-                            ? "#756054"
-                            : (groupMouse.containsMouse ? "#594b44" : "#372f2b")
+                            ? theme.selected
+                            : (groupMouse.containsMouse ? theme.hover : theme.surface)
 
                         Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -198,9 +198,9 @@ PanelWindow {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 52
                     radius: 18
-                    color: "#b5372f2b"
+                    color: theme.overlay
                     border.width: 1
-                    border.color: "#594b423c"
+                    border.color: theme.outline
 
                     RowLayout {
                         anchors.fill: parent
@@ -210,7 +210,7 @@ PanelWindow {
                         Text {
                             Layout.fillWidth: true
                             text: window.dnd ? "Уведомления приглушены" : "Не беспокоить"
-                            color: "#d7ccc0"
+                            color: theme.foreground
                             font.family: "Noto Sans"
                             font.pixelSize: 12
                             font.weight: Font.DemiBold
@@ -220,7 +220,7 @@ PanelWindow {
                             width: 46
                             height: 26
                             radius: 13
-                            color: window.dnd ? window.accent : "#594b423c"
+                            color: window.dnd ? window.accent : theme.surfaceAlt
 
                             Behavior on color { ColorAnimation { duration: 140 } }
 
@@ -230,7 +230,7 @@ PanelWindow {
                                 width: 18
                                 height: 18
                                 radius: 9
-                                color: "#ddd3c6"
+                                color: theme.foreground
 
                                 Behavior on x {
                                     NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
@@ -262,7 +262,7 @@ PanelWindow {
                         contentItem: Rectangle {
                             implicitWidth: 4
                             radius: 2
-                            color: "#a67c49"
+                            color: theme.accent
                             opacity: 0.65
                         }
                     }
@@ -292,7 +292,7 @@ PanelWindow {
                         contentItem: Rectangle {
                             implicitWidth: 4
                             radius: 2
-                            color: "#a67c49"
+                            color: theme.accent
                             opacity: 0.65
                         }
                     }
@@ -317,7 +317,7 @@ PanelWindow {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: "󰂛"
-                            color: "#655950"
+                            color: theme.surfaceAlt
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 40
                         }
@@ -334,7 +334,7 @@ PanelWindow {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: "Новые уведомления появятся здесь"
-                            color: "#746961"
+                            color: theme.outline
                             font.family: "Noto Sans"
                             font.pixelSize: 11
                         }
@@ -350,9 +350,9 @@ PanelWindow {
                 height: 46
                 radius: 23
                 visible: entries.length > 0
-                color: floatingClearMouse.containsMouse ? "#c49a7353" : window.accent
+                color: floatingClearMouse.containsMouse ? theme.accentHover : window.accent
                 border.width: 1
-                border.color: "#d0c2b4a5"
+                border.color: theme.foregroundSoft
 
                 Behavior on color { ColorAnimation { duration: 120 } }
                 Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }

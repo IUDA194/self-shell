@@ -12,6 +12,8 @@ import Quickshell.Services.Pipewire
 Item {
     id: window
 
+    Theme { id: theme }
+
     property string page: "wifi"
     property string keyboardLayout: "English (US)"
     property var networks: []
@@ -265,7 +267,7 @@ Item {
                     }
                     Text {
                         text: window.networks.length + " сетей доступно"
-                        color: "#8f847b"
+                        color: theme.muted
                         font.family: "JetBrainsMono Nerd Font"
                         font.pixelSize: 11
                     }
@@ -317,7 +319,7 @@ Item {
                     Text {
                         readonly property int connectedCount: Bluetooth.devices.values.filter(device => device.connected).length
                         text: Bluetooth.devices.values.length + " устройств доступно" + (connectedCount > 0 ? " (" + connectedCount + " подключено)" : "")
-                        color: "#8f847b"
+                        color: theme.muted
                         font.family: "JetBrainsMono Nerd Font"
                         font.pixelSize: 11
                     }
@@ -354,7 +356,7 @@ Item {
                         spacing: 10
                         Text {
                             text: !audioPage.sinkAudio || audioPage.sinkAudio.muted ? "󰝟" : ""
-                            color: audioPage.sinkAudio && audioPage.sinkAudio.muted ? "#b58e66" : "#ddd3c6"
+                            color: audioPage.sinkAudio && audioPage.sinkAudio.muted ? theme.accent : theme.foreground
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 17
                         }
@@ -362,13 +364,13 @@ Item {
                             Layout.fillWidth: true
                             text: audioPage.sink ? (audioPage.sink.description || audioPage.sink.name || "Выход") : "Аудиовыход не найден"
                             elide: Text.ElideRight
-                            color: "#cfc5ba"
+                            color: theme.foregroundSoft
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 11
                         }
                         Text {
                             text: audioPage.sinkAudio ? Math.round(audioPage.sinkAudio.volume * 100) + "%" : "—"
-                            color: "#9a8b80"
+                            color: theme.muted
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 11
                         }
@@ -395,7 +397,7 @@ Item {
                     Text {
                         visible: window.audioSinks.length > 0
                         text: "Устройства вывода"
-                        color: "#9a8b80"
+                        color: theme.muted
                         font.family: "JetBrainsMono Nerd Font"
                         font.pixelSize: 10
                     }
@@ -415,7 +417,7 @@ Item {
                     Text {
                         visible: window.audioStreams.length > 0
                         text: "Приложения"
-                        color: "#9a8b80"
+                        color: theme.muted
                         font.family: "JetBrainsMono Nerd Font"
                         font.pixelSize: 10
                     }
@@ -428,16 +430,16 @@ Item {
                             spacing: 3
                             RowLayout {
                                 Layout.fillWidth: true
-                                Text { text: "󰎆"; color: "#aaa096"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
+                                Text { text: "󰎆"; color: theme.subtle; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
                                 Text {
                                     Layout.fillWidth: true
                                     text: modelData.properties["application.name"] || modelData.description || modelData.name || "Приложение"
                                     elide: Text.ElideRight
-                                    color: "#d1c7bc"
+                                    color: theme.foreground
                                     font.family: "JetBrainsMono Nerd Font"
                                     font.pixelSize: 11
                                 }
-                                Text { text: Math.round(modelData.audio.volume * 100) + "%"; color: "#8f847b"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 10 }
+                                Text { text: Math.round(modelData.audio.volume * 100) + "%"; color: theme.muted; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 10 }
                             }
                             VolumeSlider {
                                 Layout.fillWidth: true
@@ -477,20 +479,20 @@ Item {
                     Layout.fillWidth: true
                     spacing: 14
 
-                    Text { Layout.alignment: Qt.AlignHCenter; text: ""; color: "#ccc2b7"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 38 }
+                    Text { Layout.alignment: Qt.AlignHCenter; text: ""; color: theme.foregroundSoft; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 38 }
                     SectionTitle { Layout.alignment: Qt.AlignHCenter; title: "Введите пароль" }
-                    Text { Layout.alignment: Qt.AlignHCenter; text: "Сеть: " + window.passwordSsid; color: "#8f847b"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 11 }
+                    Text { Layout.alignment: Qt.AlignHCenter; text: "Сеть: " + window.passwordSsid; color: theme.muted; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 11 }
                     TextField {
                         id: passwordInput
                         Layout.fillWidth: true
                         echoMode: TextInput.Password
                         placeholderText: "Пароль"
-                        color: "#ddd3c8"
+                        color: theme.foreground
                         font.family: "JetBrainsMono Nerd Font"
-                        background: Rectangle { color: "#423b36"; radius: 12; border.width: 1; border.color: passwordInput.activeFocus ? "#a67c49" : "#665c55" }
+                        background: Rectangle { color: theme.surface; radius: 12; border.width: 1; border.color: passwordInput.activeFocus ? theme.accent : theme.outline }
                         Keys.onReturnPressed: if (text.length > 0) window.connectNetwork(window.passwordSsid, text)
                     }
-                    Text { visible: window.errorText.length > 0; Layout.fillWidth: true; wrapMode: Text.Wrap; text: window.errorText; color: "#d58b78"; font.pixelSize: 10 }
+                    Text { visible: window.errorText.length > 0; Layout.fillWidth: true; wrapMode: Text.Wrap; text: window.errorText; color: theme.critical; font.pixelSize: 10 }
                     RowLayout {
                         Layout.fillWidth: true
                         ActionButton { Layout.fillWidth: true; text: "Отмена"; onClicked: { window.passwordSsid = ""; window.errorText = "" } }
@@ -504,7 +506,7 @@ Item {
     component SectionTitle: Text {
         required property string title
         text: title
-        color: "#ddd3c8"
+        color: theme.foreground
         font.family: "JetBrainsMono Nerd Font"
         font.pixelSize: 14
         font.weight: Font.DemiBold
@@ -516,7 +518,7 @@ Item {
         property bool checked: false
         signal toggled(bool enabled)
         Layout.fillWidth: true
-        Text { Layout.fillWidth: true; text: toggleRow.title; color: "#cfc5ba"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 12 }
+        Text { Layout.fillWidth: true; text: toggleRow.title; color: theme.foregroundSoft; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 12 }
         Rectangle {
             id: toggleTrack
 
@@ -524,10 +526,10 @@ Item {
             implicitHeight: 26
             radius: height / 2
             color: toggleRow.checked
-                ? (toggleMouse.containsMouse ? "#bd9362" : "#a67c49")
-                : (toggleMouse.containsMouse ? "#514943" : "#3d3733")
+                ? (toggleMouse.containsMouse ? theme.accentHover : theme.accent)
+                : (toggleMouse.containsMouse ? theme.surfaceAlt : theme.surface)
             border.width: 1
-            border.color: toggleRow.checked ? "#d0a574" : "#6d635c"
+            border.color: toggleRow.checked ? theme.accentHover : theme.outline
 
             Behavior on color {
                 ColorAnimation { duration: 150; easing.type: Easing.OutCubic }
@@ -543,9 +545,9 @@ Item {
                 radius: 10
                 x: toggleRow.checked ? toggleTrack.width - width - 3 : 3
                 anchors.verticalCenter: parent.verticalCenter
-                color: toggleRow.checked ? "#241d18" : "#b9afa5"
+                color: toggleRow.checked ? theme.accentForeground : theme.foregroundSoft
                 border.width: 1
-                border.color: toggleRow.checked ? "#5c422c" : "#d1c7bd"
+                border.color: toggleRow.checked ? theme.accent : theme.foregroundSoft
 
                 Behavior on x {
                     NumberAnimation {
@@ -584,12 +586,12 @@ Item {
             width: volumeSlider.availableWidth
             height: 6
             radius: 3
-            color: "#4f443e"
+            color: theme.surfaceAlt
             Rectangle {
                 width: volumeSlider.visualPosition * parent.width
                 height: parent.height
                 radius: parent.radius
-                color: volumeSlider.muted ? "#756054" : "#b58e66"
+                color: volumeSlider.muted ? theme.selected : theme.accent
             }
         }
 
@@ -599,9 +601,9 @@ Item {
             width: 16
             height: 16
             radius: 8
-            color: volumeSlider.muted ? "#9a8b80" : "#ddd3c6"
+            color: volumeSlider.muted ? theme.muted : theme.foreground
             border.width: 2
-            border.color: volumeSlider.muted ? "#756054" : "#b58e66"
+            border.color: volumeSlider.muted ? theme.selected : theme.accent
         }
     }
 
@@ -614,7 +616,7 @@ Item {
         Layout.fillWidth: true
         implicitHeight: 36
         radius: 10
-        color: selected ? "#372d29" : (layoutMouse.containsMouse ? "#302825" : "transparent")
+        color: selected ? theme.surface : (layoutMouse.containsMouse ? theme.hover : "transparent")
         scale: selected ? 1 : 0.985
 
         Behavior on color {
@@ -636,7 +638,7 @@ Item {
             width: 3
             height: layoutRow.selected ? 18 : 0
             radius: 2
-            color: "#b58e66"
+            color: theme.accent
             opacity: layoutRow.selected ? 0.8 : 0
 
             Behavior on height {
@@ -655,14 +657,14 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: 24
                 radius: 7
-                color: layoutRow.selected ? "#4f443e" : "#403733"
+                color: layoutRow.selected ? theme.surfaceAlt : theme.surface
 
                 Behavior on color { ColorAnimation { duration: 220 } }
 
                 Text {
                     anchors.centerIn: parent
                     text: layoutRow.shortName
-                    color: layoutRow.selected ? "#ddd3c6" : "#a99c92"
+                    color: layoutRow.selected ? theme.foreground : theme.subtle
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 10
                     font.weight: Font.Bold
@@ -672,7 +674,7 @@ Item {
             }
             Text {
                 text: layoutRow.selected ? "" : ""
-                color: "#b58e66"
+                color: theme.accent
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 12
                 opacity: layoutRow.selected ? 0.8 : 0
@@ -711,7 +713,7 @@ Item {
         Layout.fillWidth: true
         implicitHeight: 34
         radius: 12
-        color: connection.busy ? "#3e3731" : (containerMouse.containsMouse ? "#453e39" : "transparent")
+        color: connection.busy ? theme.pressed : (containerMouse.containsMouse ? theme.hover : "transparent")
 
         Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -735,7 +737,7 @@ Item {
 
             Text {
                 text: connection.icon
-                color: connection.busy || connection.connected ? "#c49a68" : "#aaa096"
+                color: connection.busy || connection.connected ? theme.accentHover : theme.subtle
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 17
 
@@ -746,12 +748,12 @@ Item {
                     NumberAnimation { to: 0.92; duration: 520; easing.type: Easing.InOutSine }
                 }
             }
-            Text { Layout.fillWidth: true; text: connection.name; elide: Text.ElideRight; color: connection.connected ? "#c49a68" : "#d1c7bc"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 12; font.weight: connection.connected ? Font.DemiBold : Font.Normal }
+            Text { Layout.fillWidth: true; text: connection.name; elide: Text.ElideRight; color: connection.connected ? theme.accentHover : theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 12; font.weight: connection.connected ? Font.DemiBold : Font.Normal }
             Text {
                 visible: connection.detailIcon.length > 0 && !connection.busy
                 Layout.rightMargin: connection.showSettings ? 0 : 10
                 text: connection.detailIcon
-                color: "#8f847b"
+                color: theme.muted
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 10
             }
@@ -765,7 +767,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "󰔟"
-                    color: "#c49a68"
+                    color: theme.accentHover
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 12
 
@@ -787,14 +789,14 @@ Item {
                 implicitWidth: connection.showSettings ? 30 : 0
                 implicitHeight: 30
                 radius: 8
-                color: settingsMouse.containsMouse ? "#514943" : "transparent"
+                color: settingsMouse.containsMouse ? theme.surfaceAlt : "transparent"
 
                 Behavior on color { ColorAnimation { duration: 120 } }
 
                 Text {
                     anchors.centerIn: parent
                     text: connection.busy ? "󰔟" : ""
-                    color: settingsMouse.containsMouse ? "#c49a68" : "#8f857c"
+                    color: settingsMouse.containsMouse ? theme.accentHover : theme.muted
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 11
 
@@ -826,7 +828,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: action.busy ? "󰔟" : "󰑐"
                     visible: action.busy || action.text === "Обновить список"
-                    color: action.enabled ? "#2b2118" : "#766d65"
+                    color: action.enabled ? theme.accentForeground : theme.disabled
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 11
 
@@ -843,7 +845,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: action.text
-                    color: action.enabled ? "#2b2118" : "#766d65"
+                    color: action.enabled ? theme.accentForeground : theme.disabled
                     font.family: "JetBrainsMono Nerd Font"
                     font.pixelSize: 11
                     font.weight: Font.DemiBold
@@ -852,7 +854,7 @@ Item {
         }
         background: Rectangle {
             radius: 19
-            color: action.enabled ? (action.busy ? "#9f794c" : (action.hovered ? "#c29a6a" : "#ad8454")) : "#3b3531"
+            color: action.enabled ? (action.busy ? theme.accent : (action.hovered ? theme.accentHover : theme.accent)) : theme.disabled
 
             Behavior on color { ColorAnimation { duration: 180 } }
 

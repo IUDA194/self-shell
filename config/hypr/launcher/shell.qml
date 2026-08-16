@@ -24,6 +24,7 @@ ShellRoot {
     property var launchHistory: ({})
     readonly property var launcherActions: [
         { name: "Обои", description: "!wallpaper — выбрать обои", keywords: "wallpaper wall walls обои", category: "Оформление", icon: "preferences-desktop-wallpaper", symbol: "󰸉", mode: "wallpaper", command: "" },
+        { name: "Настройки", description: "!settings · !настройки — внешний вид и темы", keywords: "settings настройки appearance theme оформление тема", category: "Оформление", icon: "preferences-system", symbol: "󰒓", mode: "settings", command: Quickshell.env("HOME") + "/.config/hypr/settings.sh" },
         { name: "Уведомления", description: "!notifications — последние события", keywords: "notifications notification notif уведомления уведомление увед", category: "Уведомления", icon: "preferences-system-notifications", symbol: "󰂚", mode: "notifications", command: "" },
         { name: "Система", description: "Сеанс и питание", keywords: "system power session система питание сеанс", category: "Система", icon: "system-shutdown", symbol: "", mode: "system", command: "" }
     ]
@@ -357,7 +358,10 @@ ShellRoot {
             const actionQuery = systemMode
                 ? query.replace(/^!system\s*/i, "").trim()
                 : query.slice(1).trim()
-            const availableActions = systemMode ? systemActions : launcherActions
+            const settingsAlias = /^(settings|настройки)$/i.test(actionQuery)
+            const availableActions = systemMode ? systemActions
+                : settingsAlias ? launcherActions.filter(action => action.mode === "settings")
+                : launcherActions
             for (let i = 0; i < availableActions.length; ++i) {
                 const action = availableActions[i]
                 const match = fuzzyScore(action.name + " " + action.description
@@ -1117,6 +1121,8 @@ ShellRoot {
                             required property string preview
                             required property string name
                             required property string kind
+                            required property string scheme
+                            required property string accent
 
                             width: 200
                             height: wallpaperCarousel.height
@@ -1144,6 +1150,7 @@ ShellRoot {
                                 border.color: wallpaperCard.ListView.isCurrentItem
                                     ? root.accent : theme.outline
                                 clip: true
+                                z: 2
                                 layer.enabled: true
                                 layer.effect: MultiEffect {
                                     maskEnabled: true
@@ -1208,6 +1215,35 @@ ShellRoot {
                                         font.weight: Font.Bold
                                     }
                                 }
+
+                                Rectangle {
+                                    id: themeButton
+                                    anchors.top: parent.top
+                                    anchors.left: parent.left
+                                    anchors.margins: 8
+                                    width: 20
+                                    height: 20
+                                    radius: 10
+                                    color: wallpaperCard.accent
+                                    border.width: 2
+                                    border.color: theme.foreground
+                                    z: 5
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        anchors.margins: -5
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: function(mouse) {
+                                            mouse.accepted = true
+                                            Quickshell.execDetached([
+                                                Quickshell.env("HOME") + "/.config/hypr/settings.sh",
+                                                wallpaperCard.path
+                                            ])
+                                            root.closeLauncher()
+                                        }
+                                    }
+                                }
                             }
 
                             Item {
@@ -1226,6 +1262,7 @@ ShellRoot {
 
                             MouseArea {
                                 anchors.fill: parent
+                                z: 1
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onEntered: wallpaperCarousel.currentIndex = wallpaperCard.index
