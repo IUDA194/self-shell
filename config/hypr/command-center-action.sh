@@ -6,6 +6,7 @@ videos="${HOME}/Videos"
 state_dir="${XDG_RUNTIME_DIR:-/tmp}/self-shell-command-center"
 recording_state="$state_dir/recording"
 night_state="$state_dir/night-light"
+caffeine_state="$state_dir/caffeine"
 mkdir -p "$videos"
 mkdir -p "$state_dir"
 
@@ -15,6 +16,36 @@ remember_recording() {
 }
 
 case "${1:-}" in
+  caffeine)
+    if [[ -r "$caffeine_state" ]]; then
+      caffeine_pid="$(cat "$caffeine_state")"
+      if [[ "$caffeine_pid" =~ ^[0-9]+$ ]]; then
+        kill "$caffeine_pid" 2>/dev/null || true
+      fi
+      rm -f -- "$caffeine_state"
+      notify-send "Кофеин выключен" "Автоматический сон снова разрешён"
+    elif command -v systemd-inhibit >/dev/null 2>&1; then
+      systemd-inhibit --what=idle:sleep --mode=block --who="Self Shell" \
+        --why="Режим Кофеин включён" sleep infinity >/dev/null 2>&1 &
+      printf '%s\n' "$!" > "$caffeine_state"
+      hyprctl dispatch dpms on >/dev/null 2>&1 || true
+      notify-send "Кофеин включён" "Экран и система не будут переходить в сон"
+    else
+      notify-send "Кофеин" "systemd-inhibit недоступен"
+      exit 1
+    fi
+    ;;
+  caffeine-status)
+    if [[ -r "$caffeine_state" ]]; then
+      caffeine_pid="$(cat "$caffeine_state")"
+      if [[ "$caffeine_pid" =~ ^[0-9]+$ ]] && kill -0 "$caffeine_pid" 2>/dev/null; then
+        printf '1\n'
+        exit 0
+      fi
+      rm -f -- "$caffeine_state"
+    fi
+    printf '0\n'
+    ;;
   night-light)
     if [[ -e "$night_state" ]]; then
       hyprctl hyprsunset temperature 6000 >/dev/null

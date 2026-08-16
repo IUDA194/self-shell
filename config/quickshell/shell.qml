@@ -599,7 +599,7 @@ ShellRoot {
             visible: root.powerMenuOpen
                 && (root.powerMenuScreen === null || root.powerMenuScreen === modelData)
             onCloseRequested: root.powerMenuOpen = false
-            onLockRequested: root.run("hyprlock")
+            onLockRequested: root.run(Quickshell.env("HOME") + "/.config/hypr/hyprlock-current.sh")
             onSuspendRequested: root.run("systemctl suspend")
             onRebootRequested: root.run("systemctl reboot")
             onPoweroffRequested: root.run("systemctl poweroff")

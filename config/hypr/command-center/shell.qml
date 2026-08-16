@@ -31,6 +31,8 @@ ShellRoot {
     property string brightnessBackend: ""
     property string brightnessDevice: ""
     property bool nightLight: false
+    property bool gamingMode: false
+    property bool caffeine: false
     property bool recording: false
     property string recordingStarted: ""
     property string recordingElapsed: "00:00"
@@ -51,6 +53,7 @@ ShellRoot {
     function refreshState() {
         if (!brightnessRead.running) brightnessRead.running = true
         if (!stateRead.running) stateRead.running = true
+        if (!caffeineRead.running) caffeineRead.running = true
         if (!recentRead.running) recentRead.running = true
         if (!notificationList.running) notificationList.running = true
         if (!dndRead.running) dndRead.running = true
@@ -85,17 +88,24 @@ ShellRoot {
 
     Process {
         id: stateRead
-        command: ["bash", "-lc", "test -e \"${XDG_RUNTIME_DIR:-/tmp}/self-shell-command-center/night-light\" && n=1 || n=0; pgrep -x wf-recorder >/dev/null && r=1 || r=0; printf '%s %s' \"$n\" \"$r\""]
+        command: ["bash", "-lc", "test -e \"${XDG_RUNTIME_DIR:-/tmp}/self-shell-command-center/night-light\" && n=1 || n=0; pgrep -x wf-recorder >/dev/null && r=1 || r=0; test -e \"${XDG_RUNTIME_DIR:-/tmp}/self-shell/gaming-mode.json\" && g=1 || g=0; printf '%s %s %s' \"$n\" \"$r\" \"$g\""]
         stdout: StdioCollector {
             onStreamFinished: {
                 const fields = text.trim().split(/\s+/)
                 root.nightLight = fields[0] === "1"
                 root.recording = fields[1] === "1"
+                root.gamingMode = fields[2] === "1"
             }
         }
     }
 
     Process { id: actionProcess; onExited: root.refreshState() }
+
+    Process {
+        id: caffeineRead
+        command: [Quickshell.env("HOME") + "/.config/hypr/command-center-action.sh", "caffeine-status"]
+        stdout: StdioCollector { onStreamFinished: root.caffeine = text.trim() === "1" }
+    }
 
     Process {
         id: phoneStatus
@@ -183,6 +193,7 @@ ShellRoot {
     }
 
     Timer { interval: 2500; repeat: true; running: true; onTriggered: stateRead.running = true }
+    Timer { interval: 2500; repeat: true; running: true; onTriggered: if (!caffeineRead.running) caffeineRead.running = true }
     Timer { interval: 1000; repeat: true; running: true; onTriggered: if (!recorderStatus.running) recorderStatus.running = true }
     Timer { interval: 5000; repeat: true; running: true; onTriggered: if (!phoneStatus.running) phoneStatus.running = true }
 
@@ -838,8 +849,8 @@ ShellRoot {
                                                 {icon:"󰹑", title:"Область", status:"Выбрать область", active:false, action:"region"},
                                                 {icon:"󰈊", title:"Пипетка", status:"Копирует HEX", active:false, action:"color"},
                                                 {icon:"󰐕", title:"OCR", status:"Распознать текст", active:false, action:"ocr"},
-                                                {icon:"󰅶", title:"Кофеин", status:"Не давать экрану гаснуть", active:false, action:"caffeine"},
-                                                {icon:"󰺵", title:"Игровой режим", status:"Gamemode", active:false, action:"gamemode"}
+                                                {icon:"󰅶", title:"Кофеин", status:root.caffeine ? "Включён" : "Выключен", active:root.caffeine, action:"caffeine"},
+                                                {icon:"󰺵", title:"Игровой режим", status:root.gamingMode ? "Включён" : "Выключен", active:root.gamingMode, action:"gamemode"}
                                             ]
                                             delegate: Rectangle {
                                                 id: actionButton
@@ -975,6 +986,8 @@ ShellRoot {
                                                             "ocr"
                                                         ])
                                                     }
+                                                    else if (modelData.action === "gamemode") actionProcess.exec([Quickshell.env("HOME") + "/.config/hypr/gaming-mode.sh", "toggle"])
+                                                    else if (modelData.action === "caffeine") actionProcess.exec([Quickshell.env("HOME") + "/.config/hypr/command-center-action.sh", "caffeine"])
                                                 } }
                                             }
                                         }

@@ -26,13 +26,14 @@ ShellRoot {
         { name: "Обои", description: "!wallpaper — выбрать обои", keywords: "wallpaper wall walls обои", category: "Оформление", icon: "preferences-desktop-wallpaper", symbol: "󰸉", mode: "wallpaper", command: "" },
         { name: "Настройки", description: "!settings · !настройки — внешний вид и темы", keywords: "settings настройки appearance theme оформление тема", category: "Оформление", icon: "preferences-system", symbol: "󰒓", mode: "settings", command: Quickshell.env("HOME") + "/.config/hypr/settings.sh" },
         { name: "Уведомления", description: "!notifications — последние события", keywords: "notifications notification notif уведомления уведомление увед", category: "Уведомления", icon: "preferences-system-notifications", symbol: "󰂚", mode: "notifications", command: "" },
-        { name: "Система", description: "Сеанс и питание", keywords: "system power session система питание сеанс", category: "Система", icon: "system-shutdown", symbol: "", mode: "system", command: "" }
+        { name: "Система", description: "Сеанс и питание", keywords: "system power session система питание сеанс", category: "Система", icon: "system-shutdown", symbol: "", mode: "system", command: "" },
+        { name: "Игровой режим", description: "Включить или выключить эффекты и тайлинг", keywords: "gaming game performance игры игровой режим производительность", category: "Система", icon: "applications-games", symbol: "󰊴", mode: "", command: Quickshell.env("HOME") + "/.config/hypr/gaming-mode.sh toggle" }
     ]
     readonly property var customApplications: [
         { id: "local-telegram", name: "Telegram", description: "Мессенджер", keywords: "telegram телеграм messenger мессенджер", icon: "telegram", command: Quickshell.env("HOME") + "/Apps/Telegram" }
     ]
     readonly property var systemActions: [
-        { name: "Заблокировать", description: "Заблокировать текущий сеанс", category: "Сеанс", icon: "system-lock-screen", symbol: "", command: "hyprlock" },
+        { name: "Заблокировать", description: "Заблокировать текущий сеанс", category: "Сеанс", icon: "system-lock-screen", symbol: "", command: Quickshell.env("HOME") + "/.config/hypr/hyprlock-current.sh" },
         { name: "Выйти", description: "Завершить сеанс Hyprland", category: "Сеанс", icon: "system-log-out", symbol: "󰗼", command: "hyprctl dispatch exit" },
         { name: "Сон", description: "Перевести компьютер в спящий режим", category: "Питание", icon: "system-suspend", symbol: "󰒲", command: "systemctl suspend" },
         { name: "Перезагрузить", description: "Перезагрузить компьютер", category: "Питание", icon: "system-reboot", symbol: "", command: "systemctl reboot" },
