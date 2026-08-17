@@ -474,6 +474,53 @@ ShellRoot {
                                 ColumnLayout {
                                     spacing: 18
 
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 14
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 3
+                                            Text {
+                                                text: "Интерфейс системы"
+                                                color: theme.foreground
+                                                font.family: "Noto Sans"
+                                                font.pixelSize: 11
+                                                font.weight: Font.DemiBold
+                                            }
+                                            Text {
+                                                text: "Перезапустить оболочку и обновить все данные"
+                                                color: theme.muted
+                                                font.family: "Noto Sans"
+                                                font.pixelSize: 9
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width: 148
+                                            height: 38
+                                            radius: 12
+                                            color: hardReloadMouse.containsMouse ? theme.accentHover : theme.accent
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "󰑐  Hard reload"
+                                                color: theme.accentForeground
+                                                font.family: "JetBrainsMono Nerd Font"
+                                                font.pixelSize: 10
+                                                font.weight: Font.Bold
+                                            }
+                                            MouseArea {
+                                                id: hardReloadMouse
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.runSystemAction("hard-reload", "")
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: theme.outline }
+
                                     Text {
                                         text: "Часовой пояс"
                                         color: theme.foreground

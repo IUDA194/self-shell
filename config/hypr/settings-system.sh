@@ -32,6 +32,12 @@ case "$action" in
     [[ "$value" == true || "$value" == false ]] || exit 2
     exec pkexec "$0" privileged-set-ntp "$value"
     ;;
+  hard-reload)
+    log_file="${XDG_CACHE_HOME:-$HOME/.cache}/self-shell-hard-reload.log"
+    mkdir -p "$(dirname "$log_file")"
+    nohup setsid "$HOME/.config/hypr/self-shell-hard-reload.sh" \
+      </dev/null >"$log_file" 2>&1 &
+    ;;
   privileged-set-time)
     [[ "$(id -u)" -eq 0 ]] || exit 1
     timedatectl set-ntp false
