@@ -42,6 +42,7 @@ ShellRoot {
     property string dockSelectedAddress: ""
     property var dockSelectedWindow: null
     property bool dockCycleActive: false
+    property bool gamingMode: false
     signal dockSwitcherRequested(string address)
     property var player: Mpris.players.values.length > 0 ? Mpris.players.values[0] : null
     readonly property var applicationStreams: Pipewire.nodes.values.filter(node =>
@@ -207,6 +208,26 @@ ShellRoot {
 
     PwObjectTracker {
         objects: root.applicationStreams
+    }
+
+    Process {
+        id: gamingModeState
+        command: ["bash", "-lc", "test -e \"${XDG_RUNTIME_DIR:-/tmp}/self-shell/gaming-mode.json\" && printf 1 || printf 0"]
+        running: true
+
+        stdout: StdioCollector {
+            onStreamFinished: root.gamingMode = text.trim() === "1"
+        }
+    }
+
+    Timer {
+        interval: 250
+        running: true
+        repeat: true
+        onTriggered: {
+            if (!gamingModeState.running)
+                gamingModeState.running = true
+        }
     }
 
     SystemClock {
@@ -398,6 +419,7 @@ ShellRoot {
                     screen.height - 64)
 
                 screen: modelData
+                visible: !root.gamingMode
                 anchors.top: true
                 implicitWidth: Math.min(1000, screen.width - 48)
                 implicitHeight: Math.min(650, screen.height - 64)
@@ -406,6 +428,11 @@ ShellRoot {
                 mask: Region { item: hoverRegion }
                 WlrLayershell.layer: WlrLayer.Overlay
                 WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+                onVisibleChanged: {
+                    if (!visible)
+                        revealStage = 0
+                }
 
                 Item {
                     id: hoverRegion
@@ -1596,6 +1623,7 @@ ShellRoot {
                     screen.width - 48, Math.max(116, windows.length * 68 + 22))
 
                 screen: modelData
+                visible: !root.gamingMode
                 anchors.bottom: true
                 implicitWidth: Math.max(contentWidth, 160)
                 implicitHeight: 104
@@ -1604,6 +1632,13 @@ ShellRoot {
                 mask: Region { item: dockHoverRegion }
                 WlrLayershell.layer: WlrLayer.Overlay
                 WlrLayershell.namespace: "quickshell-running-apps"
+
+                onVisibleChanged: {
+                    if (!visible) {
+                        revealStage = 0
+                        hoveredIndex = -1
+                    }
+                }
 
                 function scheduleClose(delay) {
                     dockOpenTimer.stop()

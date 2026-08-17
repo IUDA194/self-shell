@@ -51,8 +51,6 @@ if status is-interactive
     set -g tide_character_vi_icon_default '~>'
     set -g tide_character_vi_icon_insert '~>'
 
-    set -gx DOCKER_HOST unix:///run/user/(id -u)/docker.sock
-
     function fish_greeting
         echo 'Hi'
     end
