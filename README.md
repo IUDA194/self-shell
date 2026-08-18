@@ -25,6 +25,8 @@ bash -c 'set -e; if ! command -v git >/dev/null; then if command -v dnf >/dev/nu
 - устанавливает `ffmpeg-free` на Fedora для превью, OCR и мультимедиа;
 - ставит `mpvpaper`, чтобы wallpaper picker работал и с видео;
 - устанавливает JetBrainsMono Nerd Font, Fisher, Fish-плагины и TPM-плагины;
+- устанавливает Papirus и применяет тёмное GTK-оформление Warm Obsidian для
+  Nautilus и остальных GTK3/GTK4-приложений;
 - устанавливает SilentSDDM и собирает его оформление из текущей палитры
   `config/quickshell/Theme.qml` и активных обоев `awww`;
 - создаёт Python-окружение для Google Calendar в dashboard;
@@ -74,8 +76,10 @@ SELF_SHELL_OFFLINE=1 SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 - `config/waypaper` и `bin/self-shell-wallpaper` — состояние выбора обоев,
   запуск `awww-daemon` и восстановление последних обоев;
 - `config/nautilus/settings.ini` — вид папок и состояние окна Nautilus,
-  применяемые установщиком через dconf; сам Nautilus назначается стандартным
-  обработчиком каталогов через XDG MIME;
+  применяемые установщиком через dconf; каталоги `config/gtk-3.0` и
+  `config/gtk-4.0` содержат тёмную тему Warm Obsidian, компактную навигацию,
+  выделение папок и настройки Papirus-Dark; сам Nautilus назначается
+  стандартным обработчиком каталогов через XDG MIME;
 - остальные каталоги в `config` — терминальное окружение целиком.
 
 Runtime-кэш `~/.cache/awww` не переносится: он генерируется автоматически и

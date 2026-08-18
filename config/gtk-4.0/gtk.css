@@ -1,0 +1,455 @@
+/*
+ * Warm Obsidian — terminal-inspired GTK4/libadwaita styling.
+ * The palette mirrors Kitty, Hyprland and Quickshell in this config tree.
+ */
+
+@define-color terminal_bg #1f1b19;
+@define-color terminal_panel #26201d;
+@define-color terminal_surface #372d29;
+@define-color terminal_surface_alt #4f443e;
+@define-color terminal_border #685d58;
+@define-color terminal_fg #ddd3c6;
+@define-color terminal_muted #9a8b80;
+@define-color terminal_accent #b58e66;
+@define-color terminal_accent_bright #d9a46c;
+@define-color terminal_red #c4746e;
+@define-color terminal_glass alpha(@terminal_bg, 0.58);
+@define-color terminal_glass_panel alpha(@terminal_bg, 0.58);
+@define-color terminal_glass_surface alpha(@terminal_surface, 0.58);
+
+@define-color window_bg_color @terminal_bg;
+@define-color window_fg_color @terminal_fg;
+@define-color view_bg_color @terminal_bg;
+@define-color view_fg_color @terminal_fg;
+@define-color headerbar_bg_color @terminal_panel;
+@define-color headerbar_fg_color @terminal_fg;
+@define-color headerbar_border_color @terminal_border;
+@define-color sidebar_bg_color @terminal_panel;
+@define-color sidebar_fg_color @terminal_fg;
+@define-color sidebar_border_color @terminal_border;
+@define-color card_bg_color @terminal_surface;
+@define-color card_fg_color @terminal_fg;
+@define-color popover_bg_color @terminal_surface;
+@define-color popover_fg_color @terminal_fg;
+@define-color dialog_bg_color @terminal_panel;
+@define-color dialog_fg_color @terminal_fg;
+@define-color accent_bg_color @terminal_accent;
+@define-color accent_fg_color @terminal_bg;
+@define-color accent_color @terminal_accent_bright;
+@define-color destructive_bg_color @terminal_red;
+@define-color destructive_fg_color @terminal_bg;
+@define-color borders @terminal_border;
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "Adwaita Mono", monospace;
+  outline-color: alpha(@terminal_accent, 0.65);
+  -gtk-icon-style: symbolic;
+}
+
+window,
+window.background {
+  background-color: transparent;
+  color: @terminal_fg;
+}
+
+.background,
+textview > text,
+viewport {
+  background-color: @terminal_glass;
+  color: @terminal_fg;
+}
+
+headerbar,
+.titlebar {
+  min-height: 40px;
+  padding: 3px 7px;
+  background-color: @terminal_glass_panel;
+  background-image: none;
+  color: @terminal_fg;
+  border-bottom: 1px solid alpha(@terminal_border, 0.58);
+  box-shadow: none;
+}
+
+headerbar windowtitle title,
+headerbar windowtitle subtitle {
+  font-weight: 600;
+}
+
+button {
+  min-height: 28px;
+  min-width: 28px;
+  padding: 3px 8px;
+  color: @terminal_fg;
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+button:hover {
+  background-color: alpha(@terminal_surface_alt, 0.72);
+  border-color: alpha(@terminal_border, 0.72);
+}
+
+button:active,
+button:checked,
+button:selected,
+.suggested-action {
+  color: @terminal_bg;
+  background-color: @terminal_accent;
+  border-color: @terminal_accent_bright;
+}
+
+button.destructive-action {
+  color: @terminal_bg;
+  background-color: @terminal_red;
+}
+
+entry,
+searchentry,
+.entry {
+  min-height: 30px;
+  padding: 2px 9px;
+  color: @terminal_fg;
+  background-color: @terminal_bg;
+  border: 1px solid @terminal_border;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px alpha(#000000, 0.12);
+}
+
+entry:focus,
+searchentry:focus,
+.entry:focus-within {
+  border-color: @terminal_accent;
+  box-shadow: 0 0 0 1px alpha(@terminal_accent, 0.34);
+}
+
+selection,
+*:selected,
+row:selected,
+gridview > child:selected {
+  color: @terminal_fg;
+  background-color: alpha(@terminal_accent, 0.32);
+}
+
+separator {
+  min-width: 1px;
+  min-height: 1px;
+  background-color: alpha(@terminal_border, 0.64);
+}
+
+popover,
+popover.background,
+popover.menu.background {
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+}
+
+popover > contents,
+menu,
+.menu,
+context-menu {
+  padding: 5px;
+  color: @terminal_fg;
+  background-color: @terminal_surface;
+  border: 1px solid @terminal_border;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px alpha(#000000, 0.48);
+}
+
+popover modelbutton,
+popover row {
+  min-height: 28px;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+popover modelbutton:hover,
+popover row:hover {
+  background-color: @terminal_surface_alt;
+}
+
+tooltip {
+  color: @terminal_fg;
+  background-color: @terminal_surface;
+  border: 1px solid @terminal_border;
+  border-radius: 6px;
+}
+
+tooltip label {
+  padding: 4px 6px;
+  color: @terminal_fg;
+}
+
+scrollbar {
+  background-color: transparent;
+}
+
+scrollbar slider {
+  min-width: 5px;
+  min-height: 5px;
+  background-color: alpha(@terminal_muted, 0.42);
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+scrollbar slider:hover {
+  background-color: alpha(@terminal_accent, 0.74);
+}
+
+/* Nautilus: a compact, terminal-like file workspace. */
+.nautilus-window,
+.nautilus-window.background,
+.nautilus-window > box,
+.nautilus-window leaflet,
+.nautilus-window flap,
+.nautilus-window scrolledwindow,
+.nautilus-window viewport,
+.nautilus-window .background {
+  background-color: @terminal_bg;
+  background-image: none;
+}
+
+.nautilus-window .view {
+  background-color: @terminal_bg;
+}
+
+/* Keep the same clean Obsidian treatment when Nautilus is unfocused. */
+.nautilus-window:backdrop,
+.nautilus-window.background:backdrop,
+.nautilus-window:backdrop > box,
+.nautilus-window:backdrop leaflet,
+.nautilus-window:backdrop flap,
+.nautilus-window:backdrop scrolledwindow,
+.nautilus-window:backdrop viewport,
+.nautilus-window:backdrop .background {
+  background-color: @terminal_bg;
+  background-image: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.nautilus-window:backdrop headerbar,
+.nautilus-window headerbar:backdrop,
+.nautilus-window:backdrop .titlebar,
+.nautilus-window .titlebar:backdrop,
+.nautilus-window:backdrop placessidebar,
+.nautilus-window placessidebar:backdrop,
+.nautilus-window:backdrop .navigation-sidebar,
+.nautilus-window .navigation-sidebar:backdrop,
+.nautilus-window:backdrop .view,
+.nautilus-window .view:backdrop {
+  color: @terminal_fg;
+  background-color: @terminal_bg;
+  background-image: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.nautilus-window:backdrop headerbar button,
+.nautilus-window headerbar:backdrop button,
+.nautilus-window:backdrop headerbar label,
+.nautilus-window headerbar:backdrop label,
+.nautilus-window:backdrop placessidebar row,
+.nautilus-window placessidebar row:backdrop {
+  color: @terminal_fg;
+  opacity: 1;
+}
+
+.nautilus-window:backdrop label,
+.nautilus-window label:backdrop,
+.nautilus-window:backdrop image,
+.nautilus-window image:backdrop,
+.nautilus-window:backdrop button,
+.nautilus-window button:backdrop {
+  color: @terminal_fg;
+  opacity: 1;
+  -gtk-icon-filter: none;
+}
+
+.nautilus-window:backdrop headerbar,
+.nautilus-window headerbar:backdrop,
+.nautilus-window:backdrop .titlebar,
+.nautilus-window .titlebar:backdrop {
+  border-bottom: 1px solid alpha(@terminal_border, 0.58);
+}
+
+.nautilus-window:backdrop placessidebar,
+.nautilus-window placessidebar:backdrop,
+.nautilus-window:backdrop .navigation-sidebar,
+.nautilus-window .navigation-sidebar:backdrop {
+  border-right: 1px solid alpha(@terminal_border, 0.58);
+}
+
+.nautilus-window:backdrop statusbar,
+.nautilus-window statusbar:backdrop,
+.nautilus-window:backdrop .statusbar,
+.nautilus-window .statusbar:backdrop {
+  border-top: 1px solid alpha(@terminal_border, 0.48);
+}
+
+.nautilus-window placessidebar {
+  min-width: 210px;
+  padding: 6px;
+  background-color: @terminal_bg;
+  border-right: 1px solid alpha(@terminal_border, 0.58);
+}
+
+.nautilus-window placessidebar .navigation-sidebar,
+.nautilus-window placessidebar sidebar,
+.nautilus-window:backdrop placessidebar .navigation-sidebar,
+.nautilus-window:backdrop placessidebar sidebar {
+  background-color: transparent;
+  border: none;
+}
+
+.nautilus-window placessidebar row,
+.nautilus-window .navigation-sidebar row {
+  min-height: 31px;
+  margin: 1px 3px;
+  padding: 1px 7px;
+  border-radius: 5px;
+}
+
+.nautilus-window placessidebar row:hover,
+.nautilus-window .navigation-sidebar row:hover {
+  background-color: alpha(@terminal_surface_alt, 0.58);
+}
+
+.nautilus-window placessidebar row:selected,
+.nautilus-window .navigation-sidebar row:selected {
+  color: @terminal_fg;
+  background-color: alpha(@terminal_accent, 0.28);
+  box-shadow: inset 2px 0 @terminal_accent;
+}
+
+.nautilus-window .path-bar button,
+.nautilus-window .linked button {
+  min-height: 28px;
+  margin: 0 1px;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+
+.nautilus-window gridview > child,
+.nautilus-window flowboxchild {
+  margin: 3px;
+  padding: 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+
+.nautilus-window gridview > child:hover,
+.nautilus-window flowboxchild:hover {
+  background-color: alpha(@terminal_surface_alt, 0.34);
+  border-color: alpha(@terminal_border, 0.54);
+}
+
+.nautilus-window gridview > child:selected,
+.nautilus-window flowboxchild:selected {
+  color: @terminal_fg;
+  background-color: alpha(@terminal_accent, 0.25);
+  border-color: alpha(@terminal_accent, 0.74);
+}
+
+.nautilus-window listview row {
+  min-height: 34px;
+  border-bottom: 1px solid alpha(@terminal_border, 0.24);
+}
+
+.nautilus-window listview row:hover {
+  background-color: alpha(@terminal_surface_alt, 0.32);
+}
+
+.nautilus-window statusbar,
+.nautilus-window .statusbar {
+  color: @terminal_muted;
+  background-color: @terminal_glass_panel;
+  border-top: 1px solid alpha(@terminal_border, 0.48);
+}
+
+.dim-label,
+.caption,
+subtitle {
+  color: @terminal_muted;
+}
+
+/* Keep Nautilus chrome equally bright while its window is inactive. */
+.nautilus-window:backdrop headerbar *,
+.nautilus-window headerbar:backdrop *,
+.nautilus-window:backdrop .titlebar *,
+.nautilus-window .titlebar:backdrop *,
+.nautilus-window:backdrop .path-bar *,
+.nautilus-window .path-bar *:backdrop {
+  color: @terminal_fg;
+  opacity: 1;
+  -gtk-icon-filter: none;
+}
+
+.nautilus-window:backdrop headerbar button,
+.nautilus-window headerbar button:backdrop,
+.nautilus-window:backdrop .titlebar button,
+.nautilus-window .titlebar button:backdrop {
+  color: @terminal_fg;
+  background-color: transparent;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.nautilus-window:backdrop headerbar button:hover,
+.nautilus-window headerbar button:backdrop:hover {
+  background-color: alpha(@terminal_surface_alt, 0.48);
+}
+
+.nautilus-window:backdrop headerbar,
+.nautilus-window headerbar:backdrop,
+.nautilus-window:backdrop .titlebar,
+.nautilus-window .titlebar:backdrop {
+  color: @terminal_fg;
+  background-color: @terminal_bg;
+  background-image: none;
+  border-bottom: 1px solid alpha(@terminal_border, 0.58);
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* Keep the Nautilus top bars solid over the transparent file view. */
+.nautilus-window headerbar,
+.nautilus-window .titlebar,
+.nautilus-window:backdrop headerbar,
+.nautilus-window:backdrop .titlebar {
+  background-color: @terminal_bg;
+  background-image: none;
+  border-bottom: none;
+}
+
+.nautilus-window toolbarview > .top-bar,
+.nautilus-window toolbarview > .top-bar:backdrop {
+  background-color: @terminal_bg;
+  background-image: none;
+  border-bottom: 1px solid alpha(@terminal_border, 0.58);
+  box-shadow: none;
+}
+
+/* Libadwaita dims this parent with filter: opacity(0.5) on backdrop. */
+.nautilus-window:backdrop headerbar > windowhandle,
+.nautilus-window headerbar:backdrop > windowhandle,
+.nautilus-window:backdrop toolbarview > .top-bar > windowhandle,
+.nautilus-window toolbarview > .top-bar:backdrop > windowhandle,
+.nautilus-window:backdrop toolbarview > .top-bar headerbar > windowhandle,
+.nautilus-window toolbarview > .top-bar headerbar:backdrop > windowhandle {
+  filter: none;
+  opacity: 1;
+  transition: none;
+}

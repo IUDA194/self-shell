@@ -31,6 +31,12 @@ for name in fish kitty tmux nvim fastfetch btop quickshell hypr waypaper; do
   remove_managed_link "$HOME/.config/$name" "$repo_dir/config/$name"
 done
 
+for toolkit in gtk-3.0 gtk-4.0; do
+  for file in gtk.css settings.ini; do
+    remove_managed_link "$HOME/.config/$toolkit/$file" "$repo_dir/config/$toolkit/$file"
+  done
+done
+
 for name in .tmux.conf .gitconfig; do
   remove_managed_link "$HOME/$name" "$repo_dir/home/$name"
 done
@@ -49,4 +55,4 @@ remove_managed_link \
 printf '\nDone. Removed %d managed link(s).\n' "$removed"
 printf '%s\n' 'Removing ~/.config/hypr also removes the self-shell Quickshell autostart entries.'
 printf '%s\n' 'System packages, login shell, Nautilus settings, MIME defaults, fonts,' \
-  'tmux plugins, awww, mpvpaper, and the calendar environment were left unchanged.'
+  'icons, GTK settings, tmux plugins, awww, mpvpaper, and the calendar environment were left unchanged.'

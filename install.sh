@@ -32,7 +32,7 @@ link_path() {
 
 install_fedora_packages() {
   local packages=(
-    bash btop brightnessctl cargo curl dnf5-plugins fastfetch fd-find fish fontconfig gcc git
+    bash breeze-cursor-theme btop brightnessctl cargo curl dnf5-plugins fastfetch fd-find fish fontconfig gcc git
     grim hyprland hyprlock hyprsunset ImageMagick jq kde-connect kitty libnotify lz4-devel meson mpv-devel nautilus
     NetworkManager neovim ninja-build pass plocate playerctl pkgconf-pkg-config
     python3 python3-pip qt6-qtimageformats qt6-qtmultimedia qt6-qtsvg qt6-qtvirtualkeyboard
@@ -77,7 +77,7 @@ install_quickshell_fedora() {
 
 install_arch_packages() {
   local packages=(
-    awww bash btop brightnessctl curl fastfetch fd fish fontconfig gcc git
+    awww bash breeze btop brightnessctl curl fastfetch fd fish fontconfig gcc git
     grim hyprland hyprlock hyprsunset imagemagick jq kdeconnect kitty libnotify meson mpv nautilus networkmanager
     neovim ninja pass plocate playerctl python ripgrep rofi sddm slurp sqlite tesseract
     tesseract-data-eng tesseract-data-rus tmux
@@ -156,6 +156,21 @@ install_nerd_font() {
   rm -rf -- "$archive_dir"
 }
 
+install_papirus_icons() {
+  [[ -f "$HOME/.local/share/icons/Papirus-Dark/index.theme" ]] && return
+
+  local source_dir
+  source_dir="$(mktemp -d)"
+  trap 'rm -rf -- "$source_dir"' RETURN
+
+  git clone --depth 1 https://github.com/PapirusDevelopmentTeam/papirus-icon-theme.git \
+    "$source_dir/papirus-icon-theme"
+  "$source_dir/papirus-icon-theme/install.sh" -d "$HOME/.local/share/icons"
+
+  trap - RETURN
+  rm -rf -- "$source_dir"
+}
+
 install_calendar_environment() {
   local venv="$HOME/.local/share/dashboard-calendar/venv"
   python3 -m venv "$venv"
@@ -222,11 +237,21 @@ if [[ "${SELF_SHELL_SKIP_PACKAGES:-0}" != 1 ]]; then
 
   log 'Installing JetBrainsMono Nerd Font'
   install_nerd_font
+
+  log 'Installing Papirus icons'
+  install_papirus_icons
 fi
 
 log 'Linking the complete configuration'
 for name in fish kitty tmux fastfetch btop quickshell hypr waypaper; do
   link_path "$repo_dir/config/$name" "$HOME/.config/$name"
+done
+
+log 'Linking GTK theme files'
+for toolkit in gtk-3.0 gtk-4.0; do
+  for file in gtk.css settings.ini; do
+    link_path "$repo_dir/config/$toolkit/$file" "$HOME/.config/$toolkit/$file"
+  done
 done
 
 log 'Syncing Neovim configuration from IUDA194/nvim'
@@ -239,6 +264,18 @@ done
 
 log 'Applying Nautilus settings'
 install_nautilus_config
+
+if command -v gsettings >/dev/null 2>&1; then
+  log 'Applying the GTK appearance'
+  gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita'
+  gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
+  gsettings set org.gnome.desktop.interface font-name 'JetBrainsMono Nerd Font 11'
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+  gsettings set org.gnome.desktop.interface cursor-theme 'Breeze'
+  gsettings set org.gnome.desktop.interface cursor-size 24
+else
+  printf 'warning gsettings is unavailable; skipped GTK appearance settings\n' >&2
+fi
 
 log 'Setting Nautilus as the default file manager'
 set_default_file_manager

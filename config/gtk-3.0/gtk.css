@@ -1,0 +1,152 @@
+/* Warm Obsidian — terminal-inspired GTK3 companion theme. */
+
+@define-color terminal_bg #1f1b19;
+@define-color terminal_panel #26201d;
+@define-color terminal_surface #372d29;
+@define-color terminal_surface_alt #4f443e;
+@define-color terminal_border #685d58;
+@define-color terminal_fg #ddd3c6;
+@define-color terminal_muted #9a8b80;
+@define-color terminal_accent #b58e66;
+@define-color terminal_red #c4746e;
+@define-color terminal_glass #1f1b19;
+@define-color terminal_glass_panel #1f1b19;
+
+@define-color theme_bg_color @terminal_bg;
+@define-color theme_fg_color @terminal_fg;
+@define-color theme_base_color @terminal_bg;
+@define-color theme_text_color @terminal_fg;
+@define-color theme_selected_bg_color @terminal_accent;
+@define-color theme_selected_fg_color @terminal_bg;
+@define-color insensitive_bg_color @terminal_panel;
+@define-color insensitive_fg_color @terminal_muted;
+@define-color borders @terminal_border;
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "Adwaita Mono", monospace;
+  outline-color: alpha(@terminal_accent, 0.65);
+}
+
+window,
+window.background {
+  background-color: transparent;
+  color: @terminal_fg;
+}
+
+.background,
+textview text,
+viewport {
+  color: @terminal_fg;
+  background-color: @terminal_glass;
+}
+
+headerbar,
+.titlebar {
+  min-height: 38px;
+  padding: 3px 7px;
+  color: @terminal_fg;
+  background-color: @terminal_glass_panel;
+  background-image: none;
+  border-bottom: 1px solid alpha(@terminal_border, 0.58);
+  box-shadow: none;
+}
+
+button {
+  min-height: 27px;
+  min-width: 27px;
+  padding: 3px 8px;
+  color: @terminal_fg;
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+button:hover {
+  background-color: alpha(@terminal_surface_alt, 0.72);
+  border-color: @terminal_border;
+}
+
+button:active,
+button:checked,
+button.suggested-action {
+  color: @terminal_bg;
+  background-color: @terminal_accent;
+  border-color: @terminal_accent;
+}
+
+entry {
+  min-height: 29px;
+  padding: 2px 8px;
+  color: @terminal_fg;
+  background-color: @terminal_bg;
+  border: 1px solid @terminal_border;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+entry:focus {
+  border-color: @terminal_accent;
+  box-shadow: 0 0 0 1px alpha(@terminal_accent, 0.34);
+}
+
+popover,
+popover.background,
+popover.menu.background {
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+}
+
+menu,
+.menu,
+popover > contents {
+  color: @terminal_fg;
+  background-color: @terminal_surface;
+  border: 1px solid @terminal_border;
+  border-radius: 7px;
+}
+
+menuitem {
+  min-height: 27px;
+  padding: 3px 8px;
+}
+
+menuitem:hover,
+row:hover {
+  background-color: @terminal_surface_alt;
+}
+
+*:selected,
+row:selected {
+  color: @terminal_fg;
+  background-color: alpha(@terminal_accent, 0.32);
+}
+
+scrollbar slider {
+  min-width: 5px;
+  min-height: 5px;
+  background-color: alpha(@terminal_muted, 0.42);
+  border-radius: 999px;
+}
+
+scrollbar slider:hover {
+  background-color: alpha(@terminal_accent, 0.74);
+}
+
+tooltip {
+  color: @terminal_fg;
+  background-color: @terminal_surface;
+  border: 1px solid @terminal_border;
+  border-radius: 6px;
+}
+
+separator {
+  background-color: alpha(@terminal_border, 0.64);
+}
+
