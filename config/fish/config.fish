@@ -1,5 +1,11 @@
 if status is-interactive
 
+    abbr -a gs "git switch"
+    abbr -a gb "git branch"
+
+    abbr -a ffff "fastfetch"
+
+
     alias vim="nvim"
     alias vi="nvim"
     alias md="mkdir -p"
@@ -52,7 +58,7 @@ if status is-interactive
     set -g tide_character_vi_icon_insert '~>'
 
     function fish_greeting
-        echo 'Hi'
+        fastfetch
     end
 
     if type -q tmux; and not set -q TMUX
