@@ -14,6 +14,12 @@ PanelWindow {
     property bool grouped: true
     property real revealProgress: 0
     property bool animateReveal: false
+    property bool minimal: false
+    property string placement: "right"
+    readonly property bool topAligned: placement.startsWith("top")
+    readonly property bool bottomAligned: placement.startsWith("bottom")
+    readonly property bool leftAligned: placement.endsWith("left") || placement === "left"
+    readonly property bool rightAligned: placement.endsWith("right") || placement === "right"
     readonly property var groups: buildGroups(entries)
     readonly property color background: theme.background
     readonly property color surface: theme.surface
@@ -96,7 +102,7 @@ PanelWindow {
     Behavior on revealProgress {
         enabled: window.animateReveal
         NumberAnimation {
-            duration: 500
+            duration: window.minimal ? 110 : 500
             easing.type: Easing.BezierSpline
             easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
         }
@@ -119,24 +125,30 @@ PanelWindow {
 
         Rectangle {
             id: drawer
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            anchors.margins: 16
-            width: Math.min(454, parent.width - 32)
-            radius: 28
+            width: Math.min(window.minimal ? 500 : 454, parent.width - (window.minimal ? 2 : 32))
+            height: window.minimal ? Math.min(720, parent.height - 2) : parent.height - 32
+            x: window.leftAligned ? (window.minimal ? 1 : 16)
+                : window.rightAligned ? parent.width - width - (window.minimal ? 1 : 16)
+                : Math.round((parent.width - width) / 2)
+            y: window.topAligned ? (window.minimal ? 1 : 16)
+                : window.bottomAligned ? parent.height - height - (window.minimal ? 1 : 16)
+                : Math.round((parent.height - height) / 2)
+            radius: window.minimal ? 0 : 28
             color: window.background
             border.width: 1
             border.color: theme.outline
             opacity: window.revealProgress
-            transform: Translate { x: 32 * (1 - window.revealProgress) }
+            transform: Translate {
+                x: (window.leftAligned ? -1 : 1)
+                    * 32 * (1 - window.revealProgress)
+            }
 
             MouseArea { anchors.fill: parent }
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 18
-                spacing: 14
+                anchors.margins: window.minimal ? 10 : 18
+                spacing: window.minimal ? 8 : 14
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -152,8 +164,8 @@ PanelWindow {
                                 ? window.countText(entries.length)
                                 : "Уведомления"
                             color: window.foreground
-                            font.family: "Noto Sans"
-                            font.pixelSize: 18
+                            font.family: window.minimal ? "JetBrainsMono Nerd Font" : "Noto Sans"
+                            font.pixelSize: window.minimal ? 15 : 18
                             font.weight: Font.DemiBold
                         }
 
@@ -168,7 +180,7 @@ PanelWindow {
                     Rectangle {
                         Layout.preferredWidth: 38
                         Layout.preferredHeight: 38
-                        radius: 19
+                        radius: window.minimal ? 0 : 19
                         color: window.grouped
                             ? theme.selected
                             : (groupMouse.containsMouse ? theme.hover : theme.surface)
@@ -197,7 +209,7 @@ PanelWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 52
-                    radius: 18
+                    radius: window.minimal ? 0 : 18
                     color: theme.overlay
                     border.width: 1
                     border.color: theme.outline
@@ -219,7 +231,7 @@ PanelWindow {
                         Rectangle {
                             width: 46
                             height: 26
-                            radius: 13
+                            radius: window.minimal ? 0 : 13
                             color: window.dnd ? window.accent : theme.surfaceAlt
 
                             Behavior on color { ColorAnimation { duration: 140 } }
@@ -229,7 +241,7 @@ PanelWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 18
                                 height: 18
-                                radius: 9
+                                radius: window.minimal ? 0 : 9
                                 color: theme.foreground
 
                                 Behavior on x {
@@ -272,6 +284,7 @@ PanelWindow {
                         width: list.width
                         notification: modelData.notification
                         createdAt: modelData.createdAt
+                        minimal: window.minimal
                         onDismissRequested: window.dismissRequested(notification)
                     }
                 }
@@ -301,6 +314,7 @@ PanelWindow {
                         required property var modelData
                         width: groupedList.width
                         group: modelData
+                        minimal: window.minimal
                         onDismissRequested: notification => window.dismissRequested(notification)
                     }
                 }
@@ -348,7 +362,7 @@ PanelWindow {
                 anchors.margins: 24
                 width: 46
                 height: 46
-                radius: 23
+                radius: window.minimal ? 0 : 23
                 visible: entries.length > 0
                 color: floatingClearMouse.containsMouse ? theme.accentHover : window.accent
                 border.width: 1

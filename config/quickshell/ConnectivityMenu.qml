@@ -15,6 +15,10 @@ Item {
     Theme { id: theme }
 
     property string page: "wifi"
+    property real railWidth: 55
+    property bool fromTop: false
+    property bool standaloneSurface: false
+    property bool compactMode: false
     property string keyboardLayout: "English (US)"
     property var networks: []
     property string activeSsid: ""
@@ -31,6 +35,7 @@ Item {
     readonly property var audioTrackedNodes: [Pipewire.defaultAudioSink].concat(audioSinks).concat(audioStreams).filter(node => node)
     readonly property real surfaceTop: card.y
     readonly property real surfaceBottom: surfaceTop + card.fullHeight
+    readonly property real surfaceLeft: card.x
     readonly property real surfaceRight: card.x + card.fullWidth
 
     signal closeRequested
@@ -92,7 +97,9 @@ Item {
 
     Behavior on revealProgress {
         NumberAnimation {
-            duration: window.closing ? 500 : 240
+            duration: window.compactMode
+                ? (window.closing ? 130 : 110)
+                : (window.closing ? 500 : 240)
             easing.type: Easing.BezierSpline
             // Same expressive curve used by the launcher reveal.
             easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
@@ -101,13 +108,13 @@ Item {
 
     Timer {
         id: closeTimer
-        interval: 500
+        interval: window.compactMode ? 140 : 500
         onTriggered: window.closeRequested()
     }
 
     Timer {
         id: pageSwitchTimer
-        interval: 150
+        interval: window.compactMode ? 70 : 150
         onTriggered: {
             window.displayedPage = window.page
             window.contentOpacity = 1
@@ -118,7 +125,7 @@ Item {
 
     Behavior on contentOpacity {
         NumberAnimation {
-            duration: 150
+            duration: window.compactMode ? 70 : 150
             easing.type: Easing.OutCubic
         }
     }
@@ -191,7 +198,17 @@ Item {
 
         Rectangle {
             id: card
-            readonly property real fullWidth: window.passwordSsid.length > 0 ? 400 : (window.page === "bluetooth" ? 340 : (window.page === "audio" ? 380 : (window.page === "keyboard" ? 120 : 360)))
+            readonly property real requestedWidth: window.compactMode
+                ? (window.passwordSsid.length > 0 ? 460
+                    : window.page === "bluetooth" ? 420
+                    : window.page === "audio" ? 500
+                    : window.page === "keyboard" ? 160 : 440)
+                : (window.passwordSsid.length > 0 ? 400
+                    : window.page === "bluetooth" ? 340
+                    : window.page === "audio" ? 380
+                    : window.page === "keyboard" ? 120 : 360)
+            readonly property real fullWidth: Math.min(requestedWidth,
+                window.width - (window.fromTop ? 16 : window.railWidth + 8))
             readonly property real fullHeight: content.implicitHeight + (window.page === "keyboard" ? 24 : 40)
             readonly property real closeProgress: window.closing ? window.revealProgress : 1
             // Each surface is centred exactly on its corresponding rail button.
@@ -200,22 +217,23 @@ Item {
             // their complete content inside the screen.
             readonly property real baseBottomMargin: Math.max(28, buttonCenterFromBottom - fullHeight / 2)
 
-            anchors.left: parent.left
-            anchors.leftMargin: 55
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: baseBottomMargin
+            x: window.fromTop ? parent.width - fullWidth - 8 : window.railWidth
+            y: window.fromTop ? 46 : parent.height - fullHeight - baseBottomMargin
             width: fullWidth * closeProgress
             implicitHeight: fullHeight
             height: fullHeight
-            radius: 9 + window.revealProgress * 13
-            color: "transparent"
-            border.width: 0
+            radius: window.compactMode ? 0 : 9 + window.revealProgress * 13
+            color: window.standaloneSurface
+                ? Qt.rgba(theme.background.r, theme.background.g, theme.background.b, 1)
+                : "transparent"
+            border.width: window.standaloneSurface ? 1 : 0
+            border.color: theme.accent
             clip: true
 
             Behavior on width {
                 enabled: !window.closing
                 NumberAnimation {
-                    duration: 500
+                    duration: window.compactMode ? 120 : 500
                     easing.type: Easing.BezierSpline
                     easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
                 }
@@ -224,7 +242,7 @@ Item {
             Behavior on height {
                 enabled: !window.closing
                 NumberAnimation {
-                    duration: 500
+                    duration: window.compactMode ? 120 : 500
                     easing.type: Easing.BezierSpline
                     easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
                 }

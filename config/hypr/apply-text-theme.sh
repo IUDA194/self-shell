@@ -4,12 +4,28 @@ set -euo pipefail
 
 theme="${1:-obsidian}"
 palette_file="${2:-${XDG_CACHE_HOME:-$HOME/.cache}/self-shell/active-palette.json}"
+custom_color="${3:-#b58e66}"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/self-shell"
 text_palette="$cache_dir/text-theme.json"
 fish_theme="$cache_dir/fish-text-theme.fish"
 mkdir -p "$cache_dir"
 
+hsl_color() {
+  local source="$1" saturation="$2" lightness="$3" result
+  result="$(magick "xc:$source" -colorspace HSL -channel G -evaluate set "${saturation}%" -channel B -evaluate set "${lightness}%" +channel -colorspace sRGB -depth 8 -format '%[hex:p{0,0}]' info: 2>/dev/null)"
+  printf '#%s\n' "${result:0:6}"
+}
+
 case "$theme" in
+  custom)
+    [[ "$custom_color" =~ ^#[[:xdigit:]]{6}$ ]] || exit 2
+    jq -cn --arg background "$(hsl_color "$custom_color" 30 12)" --arg surface "$(hsl_color "$custom_color" 28 18)" \
+      --arg surfaceAlt "$(hsl_color "$custom_color" 30 26)" --arg selected "$(hsl_color "$custom_color" 36 38)" \
+      --arg foreground "$(hsl_color "$custom_color" 18 90)" --arg foregroundSoft "$(hsl_color "$custom_color" 20 79)" \
+      --arg muted "$(hsl_color "$custom_color" 18 58)" --arg accent "$(hsl_color "$custom_color" 68 66)" \
+      --arg accentHover "$(hsl_color "$custom_color" 72 74)" \
+      '{name:"custom",colors:{background:$background,surface:$surface,surfaceAlt:$surfaceAlt,selected:$selected,foreground:$foreground,foregroundSoft:$foregroundSoft,muted:$muted,accent:$accent,accentHover:$accentHover,critical:"#e06c75",success:"#98c379"}}' > "${text_palette}.tmp"
+    ;;
   auto)
     jq -c '{name:"auto",colors:.colors}' "$palette_file" > "${text_palette}.tmp"
     ;;

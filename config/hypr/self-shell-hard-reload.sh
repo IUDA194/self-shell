@@ -28,6 +28,10 @@ sleep 1
 
 hyprctl reload >/dev/null 2>&1 || true
 
+# Reload restores the Modern compositor defaults. Reapply the persisted
+# interface profile so Minimum remains gapless after shell restarts.
+"$config_root/hypr/interface-style.sh" apply >/dev/null 2>&1 || true
+
 start_shell() {
   local config="$1"
   printf 'Starting %s\n' "$config"

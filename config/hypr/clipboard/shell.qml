@@ -23,7 +23,26 @@ ShellRoot {
     property var results: []
     property bool keyboardNavigating: false
     property bool closing: false
-    property real revealProgress: 0.92
+    property real revealProgress: 0
+    property string interfaceStyle: "modern"
+    property string clipboardPosition: "center"
+    readonly property bool minimum: interfaceStyle === "minimum"
+
+    FileView {
+        path: Quickshell.env("HOME") + "/.config/self-shell/interface-style.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const state = JSON.parse(text())
+                root.interfaceStyle = state.style || "modern"
+                root.clipboardPosition = state.clipboardPosition || "center"
+            }
+            catch (error) { root.interfaceStyle = "modern" }
+        }
+    }
 
     function fuzzyScore(value, query) {
         const text = value.toLowerCase()
@@ -113,7 +132,7 @@ ShellRoot {
 
     Timer {
         id: closeTimer
-        interval: 510
+        interval: root.minimum ? 100 : 270
         onTriggered: Qt.quit()
     }
 
@@ -124,7 +143,7 @@ ShellRoot {
 
     Behavior on revealProgress {
         NumberAnimation {
-            duration: 500
+            duration: root.minimum ? 90 : 260
             easing.type: Easing.BezierSpline
             easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
         }
@@ -155,8 +174,8 @@ ShellRoot {
 
         Rectangle {
             anchors.fill: parent
-            color: theme.scrim
-            opacity: root.revealProgress
+            color: "transparent"
+            opacity: 1
 
             MouseArea {
                 anchors.fill: parent
@@ -164,20 +183,83 @@ ShellRoot {
             }
 
             Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(parent.width - 32, 520)
-                height: Math.min(parent.height - 40,
-                    62 + Math.max(1, Math.min(root.results.length, 7)) * 41)
-                radius: 20
-                color: root.background
+                id: clipboardPanel
+                readonly property int visibleRows: Math.min(root.minimum ? 8 : 7, root.results.length)
+                readonly property real listContentHeight: visibleRows > 0
+                    ? visibleRows * (root.minimum ? 36 : 57)
+                        + Math.max(0, visibleRows - 1) * (root.minimum ? 1 : 8)
+                    : 96
+                readonly property real contentHeight: listContentHeight + (root.minimum ? 44 : 48)
+                    + (root.minimum ? 24 : 44)
+                readonly property real expandedHeight: Math.min(parent.height - 48, contentHeight)
+                property real animatedHeight: expandedHeight
+
+                onExpandedHeightChanged: animatedHeight = expandedHeight
+
+                Behavior on animatedHeight {
+                    enabled: !root.closing && root.revealProgress > 0.98
+                    NumberAnimation {
+                        duration: root.minimum ? 100 : 320
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
+                    }
+                }
+
+                width: Math.min(parent.width - 48, root.minimum ? 620 : 632)
+                height: animatedHeight * root.revealProgress
+                x: root.minimum
+                    ? (root.clipboardPosition.endsWith("left") || root.clipboardPosition === "left" ? 1
+                        : root.clipboardPosition.endsWith("right") || root.clipboardPosition === "right" ? parent.width - width - 1
+                        : Math.round((parent.width - width) / 2))
+                    : Math.round((parent.width - width) / 2 + 28)
+                y: root.minimum
+                    ? (root.clipboardPosition.startsWith("top") ? 42
+                        : root.clipboardPosition.startsWith("bottom") ? parent.height - height - 1
+                        : Math.round((parent.height - height) / 2))
+                    : parent.height - height
+                radius: root.minimum ? 4 : Math.min(28, height / 2)
+                color: Qt.alpha(root.background, root.minimum ? 0.97 : 1)
                 border.width: 1
                 border.color: theme.outline
-                opacity: root.revealProgress
-                scale: 0.97 + 0.03 * root.revealProgress
+                opacity: 1
+                clip: true
 
-                Behavior on height {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                Behavior on width {
+                    enabled: !root.closing
+                    NumberAnimation {
+                        duration: root.minimum ? 100 : 500
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
+                    }
+                }
+
+                Rectangle {
+                    visible: !root.minimum
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.leftMargin: clipboardPanel.border.width
+                    anchors.rightMargin: clipboardPanel.border.width
+                    height: clipboardPanel.radius
+                    color: parent.color
+                }
+
+                Rectangle {
+                    visible: !root.minimum
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
+                    width: clipboardPanel.border.width
+                    height: clipboardPanel.radius
+                    color: clipboardPanel.border.color
+                }
+
+                Rectangle {
+                    visible: !root.minimum
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    width: clipboardPanel.border.width
+                    height: clipboardPanel.radius
+                    color: clipboardPanel.border.color
                 }
 
                 MouseArea {
@@ -185,16 +267,29 @@ ShellRoot {
                     onClicked: function(mouse) { mouse.accepted = true }
                 }
 
-                ColumnLayout {
+                GridLayout {
                     anchors.fill: parent
                     anchors.margins: 8
-                    spacing: 5
+                    columns: 1
+                    rowSpacing: root.minimum ? 6 : 5
 
                     Rectangle {
+                        Layout.row: root.minimum ? 0 : 1
                         Layout.fillWidth: true
                         Layout.preferredHeight: 44
-                        radius: 13
-                        color: searchField.activeFocus ? root.surfaceAlt : root.surface
+                        radius: root.minimum ? 2 : 24
+                        color: root.minimum ? Qt.darker(root.surfaceAlt, 1.12) : root.surfaceAlt
+                        border.width: root.minimum ? 1 : 0
+                        border.color: root.minimum ? root.accent : theme.outline
+
+                        Rectangle {
+                            visible: root.minimum
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: 3
+                            color: root.accent
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -203,23 +298,27 @@ ShellRoot {
                             spacing: 9
 
                             Text {
-                                text: "⌕"
-                                color: searchField.activeFocus ? root.accent : root.muted
+                                text: root.minimum ? ">" : "󰍉"
+                                color: root.foreground
                                 font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: 18
+                                font.pixelSize: root.minimum ? 16 : 17
+                                font.weight: root.minimum ? Font.Bold : Font.Normal
                             }
 
                             TextField {
                                 id: searchField
 
                                 Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                verticalAlignment: TextInput.AlignVCenter
                                 color: root.foreground
-                                placeholderText: "Поиск"
+                                placeholderText: root.minimum ? "Search clipboard..." : "Поиск в буфере обмена…"
                                 placeholderTextColor: root.muted
                                 selectionColor: root.selected
                                 selectedTextColor: root.foreground
                                 font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: 13
+                                font.pixelSize: root.minimum ? 15 : 14
+                                font.weight: root.minimum ? Font.Bold : Font.Normal
                                 background: null
                                 onTextChanged: {
                                     root.keyboardNavigating = false
@@ -256,6 +355,7 @@ ShellRoot {
                     }
 
                     Item {
+                        Layout.row: root.minimum ? 1 : 0
                         visible: root.allItems.length === 0
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -274,15 +374,60 @@ ShellRoot {
                     ListView {
                         id: resultList
 
+                        Layout.row: root.minimum ? 1 : 0
                         visible: root.allItems.length > 0
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         model: root.results
                         currentIndex: root.results.length > 0 ? 0 : -1
-                        spacing: 1
+                        spacing: root.minimum ? 1 : 8
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
-                        highlightMoveDuration: 90
+                        highlightFollowsCurrentItem: false
+
+                        displaced: Transition {
+                            NumberAnimation {
+                                property: "y"
+                                duration: root.minimum ? 70 : 220
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        highlight: Rectangle {
+                            y: resultList.currentItem ? resultList.currentItem.y : 0
+                            width: resultList.width
+                            height: resultList.currentItem ? resultList.currentItem.height : 0
+                            radius: root.minimum ? 2 : 16
+                            color: root.minimum ? theme.selected : root.surfaceAlt
+
+                            Behavior on y {
+                                NumberAnimation {
+                                    duration: root.minimum ? 70 : 500
+                                    easing.type: Easing.BezierSpline
+                                    easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
+                                }
+                            }
+                        }
+
+                        add: Transition {
+                            NumberAnimation {
+                                property: "opacity"
+                                from: 0; to: 1
+                                duration: root.minimum ? 60 : 200
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: [0.34, 0.8, 0.34, 1, 1, 1]
+                            }
+                        }
+
+                        remove: Transition {
+                            NumberAnimation {
+                                property: "opacity"
+                                from: 1; to: 0
+                                duration: root.minimum ? 60 : 200
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: [0.34, 0.8, 0.34, 1, 1, 1]
+                            }
+                        }
 
                         ScrollBar.vertical: ScrollBar {
                             policy: ScrollBar.AsNeeded
@@ -295,23 +440,18 @@ ShellRoot {
                             }
                         }
 
-                        delegate: Rectangle {
+                        delegate: Item {
                             id: resultRow
 
                             required property int index
                             required property var modelData
                             width: resultList.width
-                            height: 40
-                            radius: 11
-                            color: resultRow.ListView.isCurrentItem || resultMouse.containsMouse
-                                ? root.surfaceAlt : "transparent"
-
-                            Behavior on color { ColorAnimation { duration: 90 } }
+                            height: root.minimum ? 36 : 57
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 12
-                                anchors.rightMargin: 12
+                                anchors.leftMargin: root.minimum ? 8 : 12
+                                anchors.rightMargin: root.minimum ? 8 : 12
 
                                 Text {
                                     Layout.fillWidth: true
@@ -320,7 +460,8 @@ ShellRoot {
                                     elide: Text.ElideRight
                                     maximumLineCount: 1
                                     font.family: "JetBrainsMono Nerd Font"
-                                    font.pixelSize: 12
+                                    font.pixelSize: root.minimum ? 11 : 13
+                                    verticalAlignment: Text.AlignVCenter
                                 }
                             }
 

@@ -23,6 +23,10 @@ ShellRoot {
     property bool applying: false
     property bool closing: false
     property real revealProgress: 0.92
+    property string sortMode: "name"
+
+    readonly property string sortLabel: sortMode === "color" ? "Цвет"
+        : sortMode === "date" ? "Новые" : "Название"
 
     function fileUrl(path) {
         return "file://" + encodeURI(path)
@@ -38,17 +42,62 @@ ShellRoot {
         return filteredModel.get(carousel.currentIndex)
     }
 
+    function colorKey(value) {
+        const hex = String(value || "#808080").replace("#", "").slice(-6)
+        const red = parseInt(hex.slice(0, 2), 16) / 255
+        const green = parseInt(hex.slice(2, 4), 16) / 255
+        const blue = parseInt(hex.slice(4, 6), 16) / 255
+        const maximum = Math.max(red, green, blue)
+        const minimum = Math.min(red, green, blue)
+        const delta = maximum - minimum
+        let hue = 0
+        if (delta > 0) {
+            if (maximum === red)
+                hue = ((green - blue) / delta + (green < blue ? 6 : 0)) / 6
+            else if (maximum === green)
+                hue = ((blue - red) / delta + 2) / 6
+            else
+                hue = ((red - green) / delta + 4) / 6
+        }
+        const saturation = maximum === 0 ? 0 : delta / maximum
+        // Put neutral palettes after the chromatic spectrum.
+        return (saturation < 0.08 ? 2 : hue) * 1000000 + saturation * 1000 + maximum
+    }
+
+    function compareWallpapers(left, right) {
+        if (sortMode === "date") {
+            const difference = Number(right.addedAt || 0) - Number(left.addedAt || 0)
+            if (difference !== 0)
+                return difference
+        } else if (sortMode === "color") {
+            const difference = colorKey(left.accent) - colorKey(right.accent)
+            if (Math.abs(difference) > 0.001)
+                return difference
+        }
+        return displayName(left.name).localeCompare(displayName(right.name), undefined,
+                                                     { sensitivity: "base", numeric: true })
+    }
+
+    function cycleSortMode() {
+        sortMode = sortMode === "name" ? "color" : sortMode === "color" ? "date" : "name"
+        refreshFilter()
+    }
+
     function refreshFilter() {
         const query = searchInput.text.trim().toLowerCase()
         const previous = currentEntry()
         const previousPath = previous ? previous.path : Quickshell.env("WALLPAPER_PICKER_CURRENT")
-        filteredModel.clear()
+        const visibleItems = []
 
         for (let i = 0; i < wallpapers.length; ++i) {
             const item = wallpapers[i]
             if (query.length === 0 || displayName(item.name).toLowerCase().indexOf(query) !== -1)
-                filteredModel.append(item)
+                visibleItems.push(item)
         }
+        visibleItems.sort(compareWallpapers)
+        filteredModel.clear()
+        for (let i = 0; i < visibleItems.length; ++i)
+            filteredModel.append(visibleItems[i])
 
         let nextIndex = filteredModel.count > 0 ? 0 : -1
         for (let j = 0; j < filteredModel.count; ++j) {
@@ -390,6 +439,32 @@ ShellRoot {
                                     color: shell.muted
                                     font.family: "JetBrainsMono Nerd Font"
                                     font.pixelSize: 9
+                                }
+
+                                Rectangle {
+                                    Layout.preferredWidth: sortText.implicitWidth + 24
+                                    Layout.preferredHeight: 24
+                                    radius: 7
+                                    color: sortMouse.containsMouse ? theme.selected : shell.surfaceAlt
+                                    border.width: 1
+                                    border.color: sortMouse.containsMouse ? shell.accent : theme.outline
+
+                                    Text {
+                                        id: sortText
+                                        anchors.centerIn: parent
+                                        text: "󰒺  " + shell.sortLabel
+                                        color: shell.foreground
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pixelSize: 9
+                                    }
+
+                                    MouseArea {
+                                        id: sortMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: shell.cycleSortMode()
+                                    }
                                 }
                             }
                         }

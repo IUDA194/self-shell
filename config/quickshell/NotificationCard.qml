@@ -12,8 +12,14 @@ Rectangle {
     property double createdAt: Date.now()
     property bool compact: false
     property bool swipeEnabled: false
+    property bool minimal: false
     property bool dismissing: false
     property real dragOffset: 0
+    readonly property bool telegramNotification: {
+        const source = ((notification.appName || "") + " "
+            + (notification.desktopEntry || "")).toLowerCase()
+        return source.indexOf("telegram") >= 0
+    }
 
     signal dismissRequested
 
@@ -30,8 +36,8 @@ Rectangle {
         return Math.floor(hours / 24) + " д"
     }
 
-    implicitHeight: content.implicitHeight + 22
-    radius: 16
+    implicitHeight: content.implicitHeight + (minimal ? 14 : 22)
+    radius: minimal ? 0 : 16
     color: cardMouse.containsMouse ? theme.surface : theme.background
     border.width: 1
     border.color: notification.urgency === 2
@@ -46,18 +52,18 @@ Rectangle {
     Behavior on dragOffset {
         enabled: !swipeMouse.drag.active
         NumberAnimation {
-            duration: root.dismissing ? 260 : 420
+            duration: root.minimal ? 90 : (root.dismissing ? 260 : 420)
             easing.type: Easing.BezierSpline
             easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
         }
     }
 
-    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: root.minimal ? 70 : 180; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: root.minimal ? 70 : 220; easing.type: Easing.OutCubic } }
 
     Timer {
         id: swipeDismissTimer
-        interval: 250
+        interval: root.minimal ? 100 : 250
         onTriggered: root.dismissRequested()
     }
 
@@ -109,23 +115,23 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.margins: 11
-        spacing: 7
+        anchors.margins: root.minimal ? 7 : 11
+        spacing: root.minimal ? 5 : 7
 
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
 
             Rectangle {
-                Layout.preferredWidth: 38
-                Layout.preferredHeight: 38
-                radius: 19
+                Layout.preferredWidth: root.minimal ? 30 : 38
+                Layout.preferredHeight: root.minimal ? 30 : 38
+                radius: root.minimal ? 0 : 19
                 color: notification.urgency === 2 ? theme.surfaceAlt : theme.surface
 
                 IconImage {
                     anchors.centerIn: parent
-                    width: 21
-                    height: 21
+                    width: root.minimal ? 18 : 21
+                    height: root.minimal ? 18 : 21
                     source: notification.appIcon.length > 0
                         ? Quickshell.iconPath(notification.appIcon, true) : ""
                     visible: source.toString().length > 0
@@ -151,8 +157,8 @@ Rectangle {
                     color: theme.foreground
                     wrapMode: root.compact ? Text.NoWrap : Text.Wrap
                     elide: root.compact ? Text.ElideRight : Text.ElideNone
-                    font.family: "Noto Sans"
-                    font.pixelSize: 13
+                    font.family: root.minimal ? "JetBrainsMono Nerd Font" : "Noto Sans"
+                    font.pixelSize: root.minimal ? 12 : 13
                     font.weight: Font.Bold
                 }
 
@@ -182,7 +188,7 @@ Rectangle {
             Rectangle {
                 Layout.preferredWidth: 28
                 Layout.preferredHeight: 28
-                radius: 9
+                radius: root.minimal ? 0 : 9
                 color: closeMouse.containsMouse ? theme.surfaceAlt : "transparent"
 
                 Text {
@@ -221,8 +227,8 @@ Rectangle {
             wrapMode: Text.Wrap
             elide: root.compact ? Text.ElideRight : Text.ElideNone
             maximumLineCount: root.compact ? 2 : 1000
-            font.family: "Noto Sans"
-            font.pixelSize: 11
+            font.family: root.minimal ? "JetBrainsMono Nerd Font" : "Noto Sans"
+            font.pixelSize: root.minimal ? 10 : 11
             lineHeight: 1.25
         }
 
@@ -238,7 +244,7 @@ Rectangle {
                     required property var modelData
                     width: actionText.implicitWidth + 22
                     height: 30
-                    radius: 9
+                    radius: root.minimal ? 0 : 9
                     color: actionMouse.containsMouse ? theme.surfaceAlt : theme.surface
 
                     Text {
@@ -259,6 +265,43 @@ Rectangle {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: modelData.invoke()
                     }
+                }
+            }
+        }
+
+        Rectangle {
+            visible: root.telegramNotification && notification.actions.length === 0
+            Layout.fillWidth: true
+            Layout.preferredHeight: 30
+            radius: root.minimal ? 0 : 9
+            color: telegramActionMouse.containsMouse ? theme.accentHover : theme.accent
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 7
+                Text {
+                    text: "󰍉"
+                    color: theme.accentForeground
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 10
+                }
+                Text {
+                    text: "Перейти"
+                    color: theme.accentForeground
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 9
+                    font.weight: Font.Bold
+                }
+            }
+
+            MouseArea {
+                id: telegramActionMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    Quickshell.execDetached(["xdg-open", "tg://resolve"])
+                    root.dismissRequested()
                 }
             }
         }

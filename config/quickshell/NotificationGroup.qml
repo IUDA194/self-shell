@@ -10,18 +10,19 @@ Rectangle {
 
     required property var group
     property bool expanded: group.entries.length === 1
+    property bool minimal: false
 
     signal dismissRequested(var notification)
 
     implicitHeight: header.height + (expanded ? cards.implicitHeight + 12 : 0)
-    radius: 22
+    radius: minimal ? 0 : 22
     color: theme.background
     border.width: 1
     border.color: expanded ? theme.accent : theme.outline
     clip: true
 
     Behavior on implicitHeight {
-        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: root.minimal ? 90 : 180; easing.type: Easing.OutCubic }
     }
 
     Item {
@@ -46,7 +47,7 @@ Rectangle {
             Rectangle {
                 Layout.preferredWidth: 44
                 Layout.preferredHeight: 44
-                radius: 22
+                radius: root.minimal ? 0 : 22
                 color: theme.surface
 
                 IconImage {
@@ -82,7 +83,7 @@ Rectangle {
             Rectangle {
                 Layout.preferredWidth: 34
                 Layout.preferredHeight: 26
-                radius: 13
+                radius: root.minimal ? 0 : 13
                 color: theme.surfaceAlt
 
                 Text {
@@ -101,7 +102,7 @@ Rectangle {
                 rotation: root.expanded ? 180 : 0
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 16
-                Behavior on rotation { NumberAnimation { duration: 160 } }
+                Behavior on rotation { NumberAnimation { duration: root.minimal ? 80 : 160 } }
             }
         }
 
@@ -133,6 +134,7 @@ Rectangle {
                 width: cards.width
                 notification: modelData.notification
                 createdAt: modelData.createdAt
+                minimal: root.minimal
                 onDismissRequested: root.dismissRequested(notification)
             }
         }

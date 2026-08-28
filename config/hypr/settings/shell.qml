@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -19,6 +20,21 @@ ShellRoot {
     property var wallpapers: []
     property int selectedIndex: -1
     property int activeTab: 0
+    property string interfaceStyle: "modern"
+    property string panelPosition: "left"
+    property string launcherPosition: "center"
+    property string notificationPosition: "bottom-right"
+    property string notificationCenterPosition: "right"
+    property string clipboardPosition: "center"
+    property string colorMode: "wallpaper"
+    property string fixedScheme: "default"
+    property real interfaceOpacity: 0.94
+    property color customInterfaceColor: "#b58e66"
+    property color customTextColor: "#b58e66"
+    readonly property var interfaceStyles: [
+        { id: "modern", name: "Модерн", description: "Текущий стиль с панелями", icon: "󰕮", available: true },
+        { id: "minimum", name: "Минимум", description: "Чистый экран и компактная панель", icon: "󰘖", available: true }
+    ]
     property string systemTimezone: "Europe/Berlin"
     property bool systemNtp: false
     property bool systemSynchronized: false
@@ -28,19 +44,31 @@ ShellRoot {
     property int updateDays: 7
     property string updateStatus: ""
     readonly property var schemes: [
-        { id: "auto", name: "Автоматически", description: "Цвета из обоев", accent: selectedWallpaper() ? selectedWallpaper().accent : theme.accent,
-          colors: [theme.background, theme.surfaceAlt, selectedWallpaper() ? selectedWallpaper().accent : theme.accent] },
         { id: "default", name: "Default", description: "Тёплая исходная", accent: "#b58e66", colors: ["#26201d", "#4f443e", "#b58e66"] },
         { id: "kanagawa", name: "Kanagawa", description: "Японская ночь", accent: "#c0a36e", colors: ["#1f1f28", "#54546d", "#c0a36e"] },
         { id: "gruvbox", name: "Gruvbox", description: "Тёплая ретро", accent: "#d79921", colors: ["#282828", "#504945", "#d79921"] },
-        { id: "nord", name: "Nord", description: "Холодный север", accent: "#88c0d0", colors: ["#2e3440", "#434c5e", "#88c0d0"] }
+        { id: "nord", name: "Nord", description: "Холодный север", accent: "#88c0d0", colors: ["#2e3440", "#434c5e", "#88c0d0"] },
+        { id: "paper", name: "Paper", description: "Чистая белая", accent: "#3366cc", colors: ["#fafafa", "#e8e8e8", "#3366cc"] },
+        { id: "solarized-light", name: "Solarized Light", description: "Мягкая светлая", accent: "#268bd2", colors: ["#fdf6e3", "#eee8d5", "#268bd2"] },
+        { id: "latte", name: "Catppuccin Latte", description: "Пастельная светлая", accent: "#1e66f5", colors: ["#eff1f5", "#dce0e8", "#1e66f5"] },
+        { id: "rose-dawn", name: "Rosé Pine Dawn", description: "Тёплая светлая", accent: "#907aa9", colors: ["#faf4ed", "#f2e9e1", "#907aa9"] },
+        { id: "dracula", name: "Dracula", description: "Контрастная тёмная", accent: "#bd93f9", colors: ["#282a36", "#44475a", "#bd93f9"] },
+        { id: "tokyo-night", name: "Tokyo Night", description: "Синяя ночная", accent: "#7aa2f7", colors: ["#1a1b26", "#292e42", "#7aa2f7"] },
+        { id: "one-light", name: "One Light", description: "Редакторская светлая", accent: "#4078f2", colors: ["#fafafa", "#e5e5e6", "#4078f2"] },
+        { id: "github-light", name: "GitHub Light", description: "Чистая интерфейсная", accent: "#0969da", colors: ["#ffffff", "#d8dee4", "#0969da"] },
+        { id: "everforest-light", name: "Everforest Light", description: "Природная светлая", accent: "#8da101", colors: ["#fdf6e3", "#e8e5d5", "#8da101"] },
+        { id: "ayu-light", name: "Ayu Light", description: "Тёплая редакторская", accent: "#ff9940", colors: ["#fafafa", "#e7e8e9", "#ff9940"] },
+        { id: "iceberg", name: "Iceberg", description: "Холодная сумеречная", accent: "#84a0c6", colors: ["#161821", "#2e313f", "#84a0c6"] },
+        { id: "monokai", name: "Monokai", description: "Яркая классическая", accent: "#a6e22e", colors: ["#272822", "#49483e", "#a6e22e"] },
+        { id: "custom", name: "Свой цвет", description: "Открыть палитру", accent: customInterfaceColor, colors: [customInterfaceColor, Qt.darker(customInterfaceColor, 1.5), Qt.lighter(customInterfaceColor, 1.35)] }
     ]
     readonly property var textThemes: [
         { id: "obsidian", name: "Obsidian", description: "Текущая · по умолчанию", colors: ["#ccc2b7", "#ba945f", "#9f7d52"] },
         { id: "auto", name: "Автоматически", description: "Цвета из обоев", colors: [theme.foreground, theme.accent, theme.success] },
         { id: "kanagawa", name: "Kanagawa", description: "Мягкая японская", colors: ["#f2ecce", "#e6c384", "#98bb6c"] },
         { id: "gruvbox", name: "Gruvbox", description: "Тёплая ретро", colors: ["#fbf1c7", "#fabd2f", "#b8bb26"] },
-        { id: "nord", name: "Nord", description: "Холодная северная", colors: ["#ffffff", "#8fdaec", "#b8d49c"] }
+        { id: "nord", name: "Nord", description: "Холодная северная", colors: ["#ffffff", "#8fdaec", "#b8d49c"] },
+        { id: "custom", name: "Свой цвет", description: "Открыть палитру", colors: [customTextColor, Qt.lighter(customTextColor, 1.35), Qt.darker(customTextColor, 1.35)] }
     ]
 
     function fileUrl(path) { return "file://" + encodeURI(path) }
@@ -90,12 +118,20 @@ ShellRoot {
         closeTimer.restart()
     }
     function chooseScheme(id) {
-        const wall = selectedWallpaper()
-        if (!wall || themeProcess.running) return
-        requestedWallpaper = wall.path
-        themeProcess.exec([Quickshell.env("HOME") + "/.config/hypr/rofi-wallpapers.sh", "--set-theme", wall.path, id])
+        if (id === "custom") { interfaceColorDialog.open(); return }
+        if (themeProcess.running) return
+        themeProcess.exec([Quickshell.env("HOME") + "/.config/hypr/rofi-wallpapers.sh", "--set-color-mode", "fixed", id])
+    }
+    function chooseColorMode(mode) {
+        if (themeProcess.running || mode === colorMode) return
+        themeProcess.exec([Quickshell.env("HOME") + "/.config/hypr/rofi-wallpapers.sh", "--set-color-mode", mode, fixedScheme])
+    }
+    function setInterfaceOpacity(value) {
+        interfaceOpacity = value
+        opacitySaveTimer.restart()
     }
     function chooseTextTheme(id) {
+        if (id === "custom") { textColorDialog.open(); return }
         const wall = selectedWallpaper()
         if (!wall || textThemeProcess.running) return
         requestedWallpaper = wall.path
@@ -134,6 +170,50 @@ ShellRoot {
             "configure", mode, String(days)
         ])
     }
+    function chooseInterfaceStyle(style) {
+        if (style === interfaceStyle || interfaceStyleProcess.running) return
+        interfaceStyleProcess.exec([
+            Quickshell.env("HOME") + "/.config/hypr/interface-style.sh", "set", style
+        ])
+    }
+    function choosePanelPosition(position) {
+        if (position === panelPosition || interfaceStyleProcess.running) return
+        interfaceStyleProcess.exec([
+            Quickshell.env("HOME") + "/.config/hypr/interface-style.sh", "set-position", position
+        ])
+    }
+    function choosePlacement(key, value) {
+        if (interfaceStyleProcess.running) return
+        interfaceStyleProcess.exec([
+            Quickshell.env("HOME") + "/.config/hypr/interface-style.sh",
+            "set-placement", key, value
+        ])
+    }
+
+    FileView {
+        id: interfaceStyleFile
+        path: Quickshell.env("HOME") + "/.config/self-shell/interface-style.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const state = JSON.parse(text())
+                root.interfaceStyle = state.style || "modern"
+                root.panelPosition = state.panelPosition || "left"
+                root.launcherPosition = state.launcherPosition || "center"
+                root.notificationPosition = state.notificationPosition || "bottom-right"
+                root.notificationCenterPosition = state.notificationCenterPosition || "right"
+                root.clipboardPosition = state.clipboardPosition || "center"
+                root.colorMode = state.colorMode || "wallpaper"
+                root.fixedScheme = state.fixedScheme || "default"
+                root.interfaceOpacity = Number(state.opacity === undefined ? 0.94 : state.opacity)
+                root.customInterfaceColor = state.customColor || "#b58e66"
+            }
+            catch (error) { root.interfaceStyle = "modern" }
+        }
+    }
 
     FileView {
         id: manifestFile
@@ -143,6 +223,19 @@ ShellRoot {
         printErrors: false
         onFileChanged: reload()
         onLoaded: root.loadWallpapers()
+    }
+    FileView {
+        id: textCustomColorFile
+        path: Quickshell.env("HOME") + "/.config/self-shell/wallpaper-text-colors.json"
+        blockLoading: true; watchChanges: true; printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const colors = JSON.parse(text())
+                const wall = root.selectedWallpaper()
+                root.customTextColor = wall && colors[wall.path] ? colors[wall.path] : "#b58e66"
+            } catch (error) { root.customTextColor = "#b58e66" }
+        }
     }
     FileView {
         id: waypaperFile
@@ -164,11 +257,11 @@ ShellRoot {
     }
     Process {
         id: themeProcess
-        onExited: { manifestFile.reload(); root.loadWallpapers() }
+        onExited: { interfaceStyleFile.reload(); manifestFile.reload(); root.loadWallpapers() }
     }
     Process {
         id: textThemeProcess
-        onExited: { manifestFile.reload(); root.loadWallpapers() }
+        onExited: { textCustomColorFile.reload(); manifestFile.reload(); root.loadWallpapers() }
     }
     Process {
         id: applyProcess
@@ -221,7 +314,41 @@ ShellRoot {
         id: updateCheckProcess
         onExited: updateStatusProcess.running = true
     }
+    Process {
+        id: interfaceStyleProcess
+        onExited: function(exitCode, exitStatus) {
+            interfaceStyleFile.reload()
+            if (exitCode === 0) {
+                Quickshell.execDetached([
+                    Quickshell.env("HOME") + "/.config/hypr/self-shell-hard-reload.sh"
+                ])
+            }
+        }
+    }
     Timer { id: closeTimer; interval: 240; onTriggered: root.shown = false }
+    Timer {
+        id: opacitySaveTimer
+        interval: 180
+        onTriggered: opacityProcess.exec([Quickshell.env("HOME") + "/.config/hypr/interface-style.sh", "set-opacity", String(root.interfaceOpacity)])
+    }
+    Process { id: opacityProcess; onExited: interfaceStyleFile.reload() }
+    ColorDialog {
+        id: interfaceColorDialog
+        title: "Цвет интерфейса"
+        selectedColor: root.customInterfaceColor
+        options: ColorDialog.DontUseNativeDialog
+        onAccepted: themeProcess.exec([Quickshell.env("HOME") + "/.config/hypr/rofi-wallpapers.sh", "--set-custom-color", selectedColor.toString()])
+    }
+    ColorDialog {
+        id: textColorDialog
+        title: "Цвет текста и терминала"
+        selectedColor: root.customTextColor
+        options: ColorDialog.DontUseNativeDialog
+        onAccepted: {
+            const wall = root.selectedWallpaper()
+            if (wall) textThemeProcess.exec([Quickshell.env("HOME") + "/.config/hypr/rofi-wallpapers.sh", "--set-custom-text-color", wall.path, selectedColor.toString()])
+        }
+    }
 
     IpcHandler {
         target: "settings"
@@ -313,6 +440,119 @@ ShellRoot {
                                         width: appearanceScroll.availableWidth - 12
                                         spacing: 18
 
+                            Text { text: "Стиль интерфейса"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 15; font.weight: Font.DemiBold }
+                            GridLayout {
+                                Layout.fillWidth: true
+                                columns: 2
+                                rowSpacing: 10
+                                columnSpacing: 10
+                                Repeater {
+                                    model: root.interfaceStyles
+                                    Rectangle {
+                                        id: interfaceStyleCard
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 82
+                                        radius: 16
+                                        color: interfaceStyleMouse.containsMouse ? theme.hover : theme.surface
+                                        border.width: root.interfaceStyle === modelData.id ? 2 : 1
+                                        border.color: root.interfaceStyle === modelData.id ? theme.accent : theme.outline
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 14
+                                            spacing: 12
+                                            Rectangle {
+                                                width: 44
+                                                height: 44
+                                                radius: 13
+                                                color: root.interfaceStyle === interfaceStyleCard.modelData.id ? theme.accentSubtle : theme.surfaceAlt
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: interfaceStyleCard.modelData.icon
+                                                    color: root.interfaceStyle === interfaceStyleCard.modelData.id ? theme.accent : theme.muted
+                                                    font.family: "JetBrainsMono Nerd Font"
+                                                    font.pixelSize: 20
+                                                }
+                                            }
+                                            ColumnLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 3
+                                                Text { text: interfaceStyleCard.modelData.name; color: theme.foreground; font.family: "Noto Sans"; font.pixelSize: 12; font.weight: Font.DemiBold }
+                                                Text { text: interfaceStyleCard.modelData.description; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 9 }
+                                            }
+                                            Text { visible: root.interfaceStyle === interfaceStyleCard.modelData.id; text: "󰄬"; color: theme.accent; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
+                                        }
+                                        MouseArea {
+                                            id: interfaceStyleMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.chooseInterfaceStyle(interfaceStyleCard.modelData.id)
+                                        }
+                                    }
+                                }
+                            }
+
+                            RowLayout {
+                                visible: root.interfaceStyle === "minimum"
+                                Layout.fillWidth: true
+                                spacing: 10
+                                Text { text: "Расположение сайдбара"; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 11 }
+                                Item { Layout.fillWidth: true }
+                                Repeater {
+                                    model: [{id:"left", name:"←", icon:"󰍜"}, {id:"top", name:"↑", icon:"󰍝"}]
+                                    Rectangle {
+                                        id: positionButton
+                                        required property var modelData
+                                        width: 116; height: 36; radius: 10
+                                        color: root.panelPosition === modelData.id ? theme.accentSubtle : theme.surface
+                                        border.width: 1
+                                        border.color: root.panelPosition === modelData.id ? theme.accent : theme.outline
+                                        Row {
+                                            anchors.centerIn: parent; spacing: 7
+                                            Text { text: positionButton.modelData.icon; color: root.panelPosition === positionButton.modelData.id ? theme.accent : theme.muted; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
+                                            Text { text: positionButton.modelData.name; color: theme.foreground; font.family: "Noto Sans"; font.pixelSize: 10 }
+                                        }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.choosePanelPosition(positionButton.modelData.id) }
+                                    }
+                                }
+                            }
+
+                            ColumnLayout {
+                                visible: root.interfaceStyle === "minimum"
+                                Layout.fillWidth: true
+                                spacing: 8
+                                Text { text: "Расположение"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 12; font.weight: Font.DemiBold }
+                                Repeater {
+                                    model: [
+                                        {key:"launcherPosition", title:"Лаунчер", value:root.launcherPosition, options:[{id:"top-left",name:"↖"},{id:"top",name:"↑"},{id:"top-right",name:"↗"},{id:"left",name:"←"},{id:"center",name:"•"},{id:"right",name:"→"},{id:"bottom-left",name:"↙"},{id:"bottom",name:"↓"},{id:"bottom-right",name:"↘"}]},
+                                        {key:"notificationPosition", title:"Уведомления", value:root.notificationPosition, options:[{id:"top-left",name:"↖"},{id:"top",name:"↑"},{id:"top-right",name:"↗"},{id:"left",name:"←"},{id:"right",name:"→"},{id:"bottom-left",name:"↙"},{id:"bottom",name:"↓"},{id:"bottom-right",name:"↘"}]},
+                                        {key:"notificationCenterPosition", title:"Центр сообщений", value:root.notificationCenterPosition, options:[{id:"top-left",name:"↖"},{id:"top",name:"↑"},{id:"top-right",name:"↗"},{id:"left",name:"←"},{id:"right",name:"→"},{id:"bottom-left",name:"↙"},{id:"bottom",name:"↓"},{id:"bottom-right",name:"↘"}]},
+                                        {key:"clipboardPosition", title:"Буфер обмена", value:root.clipboardPosition, options:[{id:"top-left",name:"↖"},{id:"top",name:"↑"},{id:"top-right",name:"↗"},{id:"left",name:"←"},{id:"center",name:"•"},{id:"right",name:"→"},{id:"bottom-left",name:"↙"},{id:"bottom",name:"↓"},{id:"bottom-right",name:"↘"}]}
+                                    ]
+                                    RowLayout {
+                                        id: placementRow
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        spacing: 6
+                                        Text { Layout.preferredWidth: 132; text: placementRow.modelData.title; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 10 }
+                                        Repeater {
+                                            model: placementRow.modelData.options
+                                            Rectangle {
+                                                id: placementOption
+                                                required property var modelData
+                                                Layout.fillWidth: true; Layout.preferredHeight: 30; radius: 7
+                                                color: placementRow.modelData.value === modelData.id ? theme.accentSubtle : theme.surface
+                                                border.width: 1; border.color: placementRow.modelData.value === modelData.id ? theme.accent : theme.outline
+                                                Text { anchors.centerIn: parent; text: placementOption.modelData.name; color: theme.foreground; font.family: "Noto Sans"; font.pixelSize: 9 }
+                                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.choosePlacement(placementRow.modelData.key, placementOption.modelData.id) }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             Text { text: "Обои"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 15; font.weight: Font.DemiBold }
                             ListView {
                                 id: wallpaperList
@@ -377,18 +617,50 @@ ShellRoot {
                                         onClicked: {
                                             root.selectedIndex = wallCard.index
                                             root.requestedWallpaper = wallCard.path
+                                            textCustomColorFile.reload()
                                         }
                                     }
                                 }
                             }
 
                             RowLayout { Layout.fillWidth: true
-                                Text { text: "Цветовая схема"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 15; font.weight: Font.DemiBold }
+                                Text { text: "Цвет интерфейса"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 15; font.weight: Font.DemiBold }
                                 Item { Layout.fillWidth: true }
-                                Text { text: root.selectedWallpaper() ? root.displayName(root.selectedWallpaper().name) : ""; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 11 }
+                                Text { text: root.colorMode === "wallpaper" ? "Из обоев" : "Фиксированный"; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 11 }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 10
+                                Repeater {
+                                    model: [
+                                        { id: "wallpaper", name: "Из обоев", description: "Меняется вместе с фоном", icon: "󰸉" },
+                                        { id: "fixed", name: "Строго задан", description: "Не зависит от обоев", icon: "󰏘" }
+                                    ]
+                                    Rectangle {
+                                        id: colorModeCard
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 66
+                                        radius: 14
+                                        color: colorModeMouse.containsMouse ? theme.hover : theme.surface
+                                        border.width: root.colorMode === modelData.id ? 2 : 1
+                                        border.color: root.colorMode === modelData.id ? theme.accent : theme.outline
+                                        RowLayout {
+                                            anchors.fill: parent; anchors.margins: 12; spacing: 10
+                                            Text { text: colorModeCard.modelData.icon; color: root.colorMode === colorModeCard.modelData.id ? theme.accent : theme.muted; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 18 }
+                                            ColumnLayout { Layout.fillWidth: true; spacing: 1
+                                                Text { text: colorModeCard.modelData.name; color: theme.foreground; font.family: "Noto Sans"; font.pixelSize: 11; font.weight: Font.DemiBold }
+                                                Text { text: colorModeCard.modelData.description; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 9 }
+                                            }
+                                        }
+                                        MouseArea { id: colorModeMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.chooseColorMode(colorModeCard.modelData.id) }
+                                    }
+                                }
                             }
 
                             GridLayout {
+                                visible: root.colorMode === "fixed"
                                 Layout.fillWidth: true
                                 columns: 3
                                 rowSpacing: 10
@@ -402,8 +674,8 @@ ShellRoot {
                                         Layout.preferredHeight: 88
                                         radius: 16
                                         color: schemeMouse.containsMouse ? theme.hover : theme.surface
-                                        border.width: root.selectedWallpaper() && root.selectedWallpaper().scheme === modelData.id ? 2 : 1
-                                        border.color: root.selectedWallpaper() && root.selectedWallpaper().scheme === modelData.id ? theme.accent : theme.outline
+                                        border.width: root.fixedScheme === modelData.id ? 2 : 1
+                                        border.color: root.fixedScheme === modelData.id ? theme.accent : theme.outline
                                         RowLayout { anchors.fill: parent; anchors.margins: 13; spacing: 12
                                             Row { spacing: -7
                                                 Repeater { model: schemeCard.modelData.colors
@@ -418,6 +690,30 @@ ShellRoot {
                                         MouseArea { id: schemeMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.chooseScheme(schemeCard.modelData.id) }
                                     }
                                 }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+                                Text { text: "Прозрачность"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13; font.weight: Font.DemiBold }
+                                Slider {
+                                    id: opacitySlider
+                                    Layout.fillWidth: true
+                                    from: 0.35; to: 1.0; stepSize: 0.01
+                                    value: root.interfaceOpacity
+                                    onMoved: root.setInterfaceOpacity(value)
+                                    background: Rectangle {
+                                        x: opacitySlider.leftPadding; y: opacitySlider.topPadding + opacitySlider.availableHeight / 2 - height / 2
+                                        width: opacitySlider.availableWidth; height: 6; radius: 3; color: theme.surfaceAlt
+                                        Rectangle { width: opacitySlider.visualPosition * parent.width; height: parent.height; radius: 3; color: theme.accent }
+                                    }
+                                    handle: Rectangle {
+                                        x: opacitySlider.leftPadding + opacitySlider.visualPosition * (opacitySlider.availableWidth - width)
+                                        y: opacitySlider.topPadding + opacitySlider.availableHeight / 2 - height / 2
+                                        width: 20; height: 20; radius: 10; color: theme.accent; border.width: 2; border.color: theme.accentHover
+                                    }
+                                }
+                                Text { text: Math.round(root.interfaceOpacity * 100) + "%"; color: theme.accent; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 11; Layout.preferredWidth: 40; horizontalAlignment: Text.AlignRight }
                             }
 
                             RowLayout { Layout.fillWidth: true

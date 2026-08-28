@@ -1,0 +1,12 @@
+{
+  "style": "minimum",
+  "panelPosition": "left",
+  "colorMode": "wallpaper",
+  "fixedScheme": "default",
+  "customColor": "#b58e66",
+  "opacity": 0.94,
+  "launcherPosition": "top",
+  "notificationPosition": "bottom-right",
+  "notificationCenterPosition": "right",
+  "clipboardPosition": "top-right"
+}

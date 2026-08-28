@@ -14,6 +14,20 @@ ShellRoot {
 
     Theme { id: theme }
 
+    property string interfaceStyle: "modern"
+    readonly property bool minimum: interfaceStyle === "minimum"
+    FileView {
+        path: Quickshell.env("HOME") + "/.config/self-shell/interface-style.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try { root.interfaceStyle = JSON.parse(text()).style || "modern" }
+            catch (error) { root.interfaceStyle = "modern" }
+        }
+    }
+
     readonly property color background: theme.background
     readonly property color surface: theme.surface
     readonly property color surfaceAlt: theme.surfaceAlt
@@ -419,7 +433,7 @@ ShellRoot {
                     screen.height - 64)
 
                 screen: modelData
-                visible: !root.gamingMode
+                visible: !root.gamingMode && !root.minimum
                 anchors.top: true
                 implicitWidth: Math.min(1000, screen.width - 48)
                 implicitHeight: Math.min(650, screen.height - 64)

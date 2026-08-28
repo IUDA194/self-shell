@@ -12,6 +12,25 @@ ShellRoot {
 
     Theme { id: theme }
 
+    property string interfaceStyle: "modern"
+    property string launcherPosition: "center"
+    readonly property bool minimum: interfaceStyle === "minimum"
+    FileView {
+        path: Quickshell.env("HOME") + "/.config/self-shell/interface-style.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const state = JSON.parse(text())
+                root.interfaceStyle = state.style || "modern"
+                root.launcherPosition = state.launcherPosition || "center"
+            }
+            catch (error) { root.interfaceStyle = "modern" }
+        }
+    }
+
     readonly property color background: theme.background
     readonly property color surface: theme.surface
     readonly property color surfaceAlt: theme.surfaceAlt
@@ -45,6 +64,12 @@ ShellRoot {
     property var wallpapers: []
     property string currentWallpaper: ""
     property bool wallpaperMode: false
+    property bool liveWallpaperMode: false
+    property string staticWallpaperSelection: ""
+    property string liveWallpaperSelection: ""
+    property string wallpaperSortMode: "name"
+    readonly property string wallpaperSortLabel: wallpaperSortMode === "color" ? "Цвет"
+        : wallpaperSortMode === "date" ? "Новые" : "Название"
     property bool systemMode: false
     property bool notificationsMode: false
     property var notifications: []
@@ -84,6 +109,11 @@ ShellRoot {
                 if (value.startsWith("~/"))
                     value = Quickshell.env("HOME") + "/" + value.slice(2)
                 root.currentWallpaper = value
+                if (root.wallpaperMode) {
+                    root.liveWallpaperMode = root.isLiveWallpaperPath(value)
+                    wallpaperCarousel.currentIndex = -1
+                    root.setWallpaperPrompt()
+                }
             }
         }
     }
@@ -140,6 +170,85 @@ ShellRoot {
         return name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ")
     }
 
+    function wallpaperColorKey(value) {
+        const hex = String(value || "#808080").replace("#", "").slice(-6)
+        const red = parseInt(hex.slice(0, 2), 16) / 255
+        const green = parseInt(hex.slice(2, 4), 16) / 255
+        const blue = parseInt(hex.slice(4, 6), 16) / 255
+        const maximum = Math.max(red, green, blue)
+        const minimumValue = Math.min(red, green, blue)
+        const delta = maximum - minimumValue
+        let hue = 0
+        if (delta > 0) {
+            if (maximum === red)
+                hue = ((green - blue) / delta + (green < blue ? 6 : 0)) / 6
+            else if (maximum === green)
+                hue = ((blue - red) / delta + 2) / 6
+            else
+                hue = ((red - green) / delta + 4) / 6
+        }
+        const saturation = maximum === 0 ? 0 : delta / maximum
+        return (saturation < 0.08 ? 2 : hue) * 1000000 + saturation * 1000 + maximum
+    }
+
+    function compareWallpapers(left, right) {
+        if (wallpaperSortMode === "date") {
+            const difference = Number(right.addedAt || 0) - Number(left.addedAt || 0)
+            if (difference !== 0)
+                return difference
+        } else if (wallpaperSortMode === "color") {
+            const difference = wallpaperColorKey(left.accent) - wallpaperColorKey(right.accent)
+            if (Math.abs(difference) > 0.001)
+                return difference
+        }
+        return wallpaperName(left.name).localeCompare(wallpaperName(right.name), undefined,
+                                                       { sensitivity: "base", numeric: true })
+    }
+
+    function cycleWallpaperSort() {
+        wallpaperSortMode = wallpaperSortMode === "name" ? "color"
+            : wallpaperSortMode === "color" ? "date" : "name"
+        refreshWallpapers()
+    }
+
+    function isLiveWallpaperPath(path) {
+        return path.startsWith(Quickshell.env("HOME") + "/Documents/Wallpapers/live/")
+    }
+
+    function wallpaperQuery() {
+        return searchField.text
+            .replace(/^!wallpaper(?:\s+(?:static|live))?\s*/i, "")
+    }
+
+    function setWallpaperPrompt() {
+        const query = wallpaperQuery()
+        searchField.text = "!wallpaper " + (liveWallpaperMode ? "live " : "static ") + query
+        searchField.cursorPosition = searchField.text.length
+    }
+    function focusSearchInput() {
+        if (minimum)
+            minimumSearchInput.forceActiveFocus()
+        else
+            searchField.forceActiveFocus()
+    }
+
+    function showLiveWallpapers(live) {
+        if (!wallpaperMode || liveWallpaperMode === live)
+            return
+        if (wallpaperCarousel.currentIndex >= 0
+                && wallpaperCarousel.currentIndex < wallpaperModel.count) {
+            const selectedPath = wallpaperModel.get(wallpaperCarousel.currentIndex).path
+            if (liveWallpaperMode)
+                liveWallpaperSelection = selectedPath
+            else
+                staticWallpaperSelection = selectedPath
+        }
+        liveWallpaperMode = live
+        wallpaperModel.clear()
+        wallpaperCarousel.currentIndex = -1
+        setWallpaperPrompt()
+    }
+
     function loadWallpapers() {
         try {
             const text = wallpaperManifest.text().trim()
@@ -153,16 +262,28 @@ ShellRoot {
     function refreshWallpapers() {
         if (!wallpaperMode)
             return
-        const query = searchField.text.replace(/^!wallpaper\s*/i, "").trim().toLowerCase()
-        const previous = wallpaperCarousel.currentIndex >= 0
+        const query = wallpaperQuery().trim().toLowerCase()
+        let previous = wallpaperCarousel.currentIndex >= 0
             && wallpaperCarousel.currentIndex < wallpaperModel.count
             ? wallpaperModel.get(wallpaperCarousel.currentIndex).path : currentWallpaper
-        wallpaperModel.clear()
+        const wantedGroup = liveWallpaperMode ? "live" : "static"
+        const previousIsLive = isLiveWallpaperPath(previous)
+        if ((wantedGroup === "live") !== previousIsLive) {
+            const remembered = liveWallpaperMode ? liveWallpaperSelection : staticWallpaperSelection
+            previous = remembered || (isLiveWallpaperPath(currentWallpaper) === liveWallpaperMode
+                ? currentWallpaper : "")
+        }
+        const visibleWallpapers = []
         for (let i = 0; i < wallpapers.length; ++i) {
             const wall = wallpapers[i]
-            if (!query || wallpaperName(wall.name).toLowerCase().indexOf(query) >= 0)
-                wallpaperModel.append(wall)
+            if ((wall.group || "static") === wantedGroup
+                    && (!query || wallpaperName(wall.name).toLowerCase().indexOf(query) >= 0))
+                visibleWallpapers.push(wall)
         }
+        visibleWallpapers.sort(compareWallpapers)
+        wallpaperModel.clear()
+        for (let i = 0; i < visibleWallpapers.length; ++i)
+            wallpaperModel.append(visibleWallpapers[i])
         let next = wallpaperModel.count > 0 ? 0 : -1
         for (let j = 0; j < wallpaperModel.count; ++j) {
             if (wallpaperModel.get(j).path === previous) {
@@ -177,13 +298,15 @@ ShellRoot {
 
     function enterWallpaperMode() {
         wallpaperMode = true
+        liveWallpaperMode = isLiveWallpaperPath(currentWallpaper)
         systemMode = false
         notificationsMode = false
-        searchField.text = "!wallpaper "
+        wallpaperCarousel.currentIndex = -1
+        searchField.text = "!wallpaper " + (liveWallpaperMode ? "live " : "static ")
         refreshWallpapers()
         wallpaperPrepareProcess.running = true
         Qt.callLater(function() {
-            searchField.forceActiveFocus()
+            root.focusSearchInput()
         })
     }
 
@@ -194,7 +317,7 @@ ShellRoot {
         searchField.text = "!system "
         refreshResults(false)
         Qt.callLater(function() {
-            searchField.forceActiveFocus()
+            root.focusSearchInput()
             searchField.cursorPosition = searchField.text.length
         })
     }
@@ -207,7 +330,7 @@ ShellRoot {
         notificationListProcess.running = false
         notificationListProcess.running = true
         Qt.callLater(function() {
-            searchField.forceActiveFocus()
+            root.focusSearchInput()
             searchField.cursorPosition = searchField.text.length
         })
     }
@@ -497,7 +620,7 @@ ShellRoot {
         searchField.clear()
         refreshResults(false)
         Qt.callLater(function() {
-            searchField.forceActiveFocus()
+            root.focusSearchInput()
             root.revealProgress = 1
         })
     }
@@ -561,7 +684,7 @@ ShellRoot {
     Timer {
         id: closeTimer
         // Keep the layer alive until the spatial animation finishes.
-        interval: 270
+        interval: root.minimum ? 100 : 270
         onTriggered: {
             root.windowShown = false
             root.closing = false
@@ -582,7 +705,7 @@ ShellRoot {
         enabled: root.windowShown
 
         NumberAnimation {
-            duration: 260
+            duration: root.minimum ? 90 : 260
             easing.type: Easing.BezierSpline
             easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
         }
@@ -629,7 +752,7 @@ ShellRoot {
 
             readonly property int visibleRows: root.wallpaperMode ? 0
                 : root.notificationsMode ? 0
-                : Math.min(7, root.results.length)
+                : Math.min(root.minimum ? 8 : 7, root.results.length)
             readonly property real notificationContentHeight: {
                 if (root.notificationGroups.length === 0)
                     return 112
@@ -645,11 +768,13 @@ ShellRoot {
                 return Math.min(420, total)
             }
             readonly property real listContentHeight: visibleRows > 0
-                ? visibleRows * (root.notificationsMode ? 78 : 57) + Math.max(0, visibleRows - 1) * 8
+                ? visibleRows * (root.notificationsMode ? 78 : (root.minimum ? 36 : 57))
+                    + Math.max(0, visibleRows - 1) * (root.minimum ? 1 : 8)
                 : root.wallpaperMode ? 166
                     : root.notificationsMode ? notificationContentHeight
                     : 96
-            readonly property real contentHeight: listContentHeight + 48 + 16 + 16 + 12
+            readonly property real contentHeight: listContentHeight + (root.minimum ? 44 : 48)
+                + (root.minimum ? 24 : 44)
             readonly property real expandedHeight: Math.min(parent.height - 48, contentHeight)
             property real animatedHeight: expandedHeight
 
@@ -658,22 +783,26 @@ ShellRoot {
             Behavior on animatedHeight {
                 enabled: root.windowShown && !root.closing && root.revealProgress > 0.98
                 NumberAnimation {
-                    duration: 320
+                    duration: root.minimum ? 100 : 320
                     easing.type: Easing.BezierSpline
                     easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
                 }
             }
 
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 0
-            anchors.horizontalCenter: parent.horizontalCenter
-            // Integer logical coordinate avoids half-pixel sampling at 1.25 scale.
-            anchors.horizontalCenterOffset: 28
-
-            width: Math.min(parent.width - 48, root.wallpaperMode ? 1050 : 632)
+            width: Math.min(parent.width - 48, root.wallpaperMode ? 1050 : (root.minimum ? 620 : 632))
             height: animatedHeight * root.revealProgress
-            radius: Math.min(28, height / 2)
-            color: root.background
+            x: root.minimum
+                ? (root.launcherPosition.endsWith("left") || root.launcherPosition === "left" ? 1
+                    : root.launcherPosition.endsWith("right") || root.launcherPosition === "right" ? parent.width - width - 1
+                    : Math.round((parent.width - width) / 2))
+                : Math.round((parent.width - width) / 2 + 28)
+            y: root.minimum
+                ? (root.launcherPosition.startsWith("top") ? 42
+                    : root.launcherPosition.startsWith("bottom") ? parent.height - height - 1
+                    : Math.round((parent.height - height) / 2))
+                : parent.height - height
+            radius: root.minimum ? 4 : Math.min(28, height / 2)
+            color: Qt.alpha(root.background, root.minimum ? 0.97 : 1)
             border.width: 1
             border.color: theme.outline
             opacity: 1
@@ -682,7 +811,7 @@ ShellRoot {
             Behavior on width {
                 enabled: !root.closing
                 NumberAnimation {
-                    duration: 500
+                    duration: root.minimum ? 100 : 500
                     easing.type: Easing.BezierSpline
                     easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
                 }
@@ -691,6 +820,7 @@ ShellRoot {
             // Continue the panel through the screen edge while preserving the
             // one-pixel side borders all the way down.
             Rectangle {
+                visible: !root.minimum
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
@@ -701,6 +831,7 @@ ShellRoot {
             }
 
             Rectangle {
+                visible: !root.minimum
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 width: launcherPanel.border.width
@@ -709,6 +840,7 @@ ShellRoot {
             }
 
             Rectangle {
+                visible: !root.minimum
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 width: launcherPanel.border.width
@@ -723,19 +855,20 @@ ShellRoot {
 
             Item {
                 anchors.fill: parent
-                anchors.leftMargin: 16
-                anchors.rightMargin: 16
-                anchors.topMargin: 16
-                anchors.bottomMargin: 12
+                anchors.leftMargin: root.minimum ? 8 : 16
+                anchors.rightMargin: root.minimum ? 8 : 16
+                anchors.topMargin: root.minimum ? 8 : 16
+                anchors.bottomMargin: root.minimum ? 8 : 12
 
                 Item {
                     id: listArea
 
                     anchors.top: parent.top
+                    anchors.topMargin: root.minimum ? 50 : 0
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.bottom: searchBackground.top
-                    anchors.bottomMargin: 16
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: root.minimum ? 0 : 64
                     clip: true
 
                     ListView {
@@ -744,7 +877,7 @@ ShellRoot {
                         anchors.fill: parent
                         model: root.results
                         currentIndex: root.results.length > 0 ? 0 : -1
-                        spacing: 8
+                        spacing: root.minimum ? 1 : 8
                         clip: true
                         visible: !root.wallpaperMode && !root.notificationsMode && count > 0
                         boundsBehavior: Flickable.StopAtBounds
@@ -754,7 +887,7 @@ ShellRoot {
                         displaced: Transition {
                             NumberAnimation {
                                 property: "y"
-                                duration: 220
+                                duration: root.minimum ? 70 : 220
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -763,12 +896,12 @@ ShellRoot {
                             y: resultList.currentItem ? resultList.currentItem.y : 0
                             width: resultList.width
                             height: resultList.currentItem ? resultList.currentItem.height : 0
-                            radius: 16
-                            color: root.surfaceAlt
+                            radius: root.minimum ? 2 : 16
+                            color: root.minimum ? theme.selected : root.surfaceAlt
 
                             Behavior on y {
                                 NumberAnimation {
-                                    duration: 500
+                                    duration: root.minimum ? 70 : 500
                                     easing.type: Easing.BezierSpline
                                     easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
                                 }
@@ -780,7 +913,7 @@ ShellRoot {
                                 property: "opacity"
                                 from: 0
                                 to: 1
-                                duration: 200
+                                duration: root.minimum ? 60 : 200
                                 easing.type: Easing.BezierSpline
                                 easing.bezierCurve: [0.34, 0.8, 0.34, 1, 1, 1]
                             }
@@ -791,7 +924,7 @@ ShellRoot {
                                 property: "opacity"
                                 from: 1
                                 to: 0
-                                duration: 200
+                                duration: root.minimum ? 60 : 200
                                 easing.type: Easing.BezierSpline
                                 easing.bezierCurve: [0.34, 0.8, 0.34, 1, 1, 1]
                             }
@@ -814,19 +947,19 @@ ShellRoot {
                             required property int index
                             required property var modelData
                             width: resultList.width
-                            height: 57
+                            height: root.minimum ? 36 : 57
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 12
-                                anchors.rightMargin: 12
-                                anchors.topMargin: 8
-                                anchors.bottomMargin: 8
-                                spacing: 12
+                                    anchors.leftMargin: root.minimum ? 8 : 12
+                                    anchors.rightMargin: root.minimum ? 8 : 12
+                                    anchors.topMargin: root.minimum ? 5 : 8
+                                    anchors.bottomMargin: root.minimum ? 5 : 8
+                                    spacing: root.minimum ? 8 : 12
 
                                 Image {
-                                    Layout.preferredWidth: 32
-                                    Layout.preferredHeight: 32
+                                    Layout.preferredWidth: root.minimum ? 20 : 32
+                                    Layout.preferredHeight: root.minimum ? 20 : 32
                                     source: Quickshell.iconPath(
                                         String(resultRow.modelData.icon), "image-missing")
                                     sourceSize.width: 64
@@ -835,10 +968,12 @@ ShellRoot {
                                     smooth: true
                                     mipmap: true
                                     asynchronous: false
+                                    Layout.alignment: Qt.AlignVCenter
                                 }
 
                                 ColumnLayout {
                                     Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
                                     spacing: 0
 
                                     Text {
@@ -846,18 +981,20 @@ ShellRoot {
                                         text: resultRow.modelData.name
                                         color: root.foreground
                                         elide: Text.ElideRight
-                                        font.family: "Noto Sans"
-                                        font.pixelSize: 14
+                                        font.family: root.minimum ? "JetBrainsMono Nerd Font" : "Noto Sans"
+                                        font.pixelSize: root.minimum ? 11 : 14
                                         font.weight: Font.Medium
+                                        verticalAlignment: Text.AlignVCenter
                                     }
 
                                     Text {
+                                        visible: !root.minimum
                                         Layout.fillWidth: true
                                         text: resultRow.modelData.description
                                         color: root.muted
                                         elide: Text.ElideRight
                                         font.family: "Noto Sans"
-                                        font.pixelSize: 12
+                                        font.pixelSize: root.minimum ? 10 : 12
                                     }
                                 }
                             }
@@ -1115,6 +1252,20 @@ ShellRoot {
                         preferredHighlightBegin: width / 2 - 100
                         preferredHighlightEnd: width / 2 + 100
 
+                        WheelHandler {
+                            target: null
+                            onWheel: function(event) {
+                                if (wallpaperCarousel.count === 0)
+                                    return
+                                const direction = event.angleDelta.y < 0 || event.angleDelta.x < 0 ? 1 : -1
+                                wallpaperCarousel.currentIndex = (wallpaperCarousel.currentIndex
+                                    + direction + wallpaperCarousel.count) % wallpaperCarousel.count
+                                wallpaperCarousel.positionViewAtIndex(
+                                    wallpaperCarousel.currentIndex, ListView.Center)
+                                event.accepted = true
+                            }
+                        }
+
                         delegate: Item {
                             id: wallpaperCard
                             required property int index
@@ -1261,13 +1412,17 @@ ShellRoot {
                                 }
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                z: 1
-                                hoverEnabled: true
+                            HoverHandler {
+                                onHoveredChanged: {
+                                    if (hovered)
+                                        wallpaperCarousel.currentIndex = wallpaperCard.index
+                                }
+                            }
+
+                            TapHandler {
+                                acceptedButtons: Qt.LeftButton
                                 cursorShape: Qt.PointingHandCursor
-                                onEntered: wallpaperCarousel.currentIndex = wallpaperCard.index
-                                onClicked: {
+                                onTapped: {
                                     wallpaperCarousel.currentIndex = wallpaperCard.index
                                     root.activateWallpaper()
                                 }
@@ -1323,39 +1478,167 @@ ShellRoot {
 
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: 48
+                    height: root.minimum ? 44 : 48
+                    y: root.minimum ? 0 : parent.height - height
                     z: 1
-                    radius: 24
-                    color: root.surfaceAlt
+                    radius: root.minimum ? 2 : 24
+                    color: root.minimum ? Qt.darker(root.surfaceAlt, 1.12) : root.surfaceAlt
+                    border.width: root.minimum ? 1 : 0
+                    border.color: root.minimum ? root.accent : theme.outline
+
+                    Rectangle {
+                        visible: root.minimum
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: 3
+                        color: root.accent
+                    }
+
+                    Text {
+                        visible: root.minimum
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: ">"
+                        color: root.foreground
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                    }
+
+                    TextInput {
+                        id: minimumSearchInput
+                        visible: root.minimum
+                        z: 3
+                        anchors.left: parent.left
+                        anchors.leftMargin: 34
+                        anchors.right: parent.right
+                        anchors.rightMargin: root.wallpaperMode ? 132 : 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: parent.height
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: "#ffffff"
+                        selectionColor: root.selected
+                        selectedTextColor: root.foreground
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 15
+                        font.weight: Font.Bold
+                        cursorDelegate: Rectangle { width: 2; color: root.accent }
+                        onTextChanged: {
+                            if (searchField.text !== text)
+                                searchField.text = text
+                        }
+                        Keys.onDownPressed: function(event) {
+                            if (root.wallpaperMode) {
+                                root.showLiveWallpapers(false)
+                                event.accepted = true
+                                return
+                            }
+                            if (root.results.length > 0) {
+                                resultList.currentIndex = (resultList.currentIndex + 1) % root.results.length
+                                resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain)
+                            }
+                            event.accepted = true
+                        }
+                        Keys.onUpPressed: function(event) {
+                            if (root.wallpaperMode) {
+                                root.showLiveWallpapers(true)
+                                event.accepted = true
+                                return
+                            }
+                            if (root.results.length > 0) {
+                                resultList.currentIndex = (resultList.currentIndex - 1 + root.results.length) % root.results.length
+                                resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain)
+                            }
+                            event.accepted = true
+                        }
+                        Keys.onLeftPressed: function(event) {
+                            if (!root.wallpaperMode || wallpaperModel.count === 0)
+                                return
+                            wallpaperCarousel.currentIndex = (wallpaperCarousel.currentIndex - 1
+                                + wallpaperModel.count) % wallpaperModel.count
+                            wallpaperCarousel.positionViewAtIndex(
+                                wallpaperCarousel.currentIndex, ListView.Center)
+                            event.accepted = true
+                        }
+                        Keys.onRightPressed: function(event) {
+                            if (!root.wallpaperMode || wallpaperModel.count === 0)
+                                return
+                            wallpaperCarousel.currentIndex = (wallpaperCarousel.currentIndex + 1)
+                                % wallpaperModel.count
+                            wallpaperCarousel.positionViewAtIndex(
+                                wallpaperCarousel.currentIndex, ListView.Center)
+                            event.accepted = true
+                        }
+                        Keys.onReturnPressed: function(event) {
+                            if (root.wallpaperMode)
+                                root.activateWallpaper()
+                            else
+                                root.activate(resultList.currentIndex)
+                            event.accepted = true
+                        }
+                        Keys.onEnterPressed: function(event) {
+                            if (root.wallpaperMode)
+                                root.activateWallpaper()
+                            else
+                                root.activate(resultList.currentIndex)
+                            event.accepted = true
+                        }
+                    }
+
+                    Text {
+                        visible: root.minimum && minimumSearchInput.text.length === 0
+                        z: 2
+                        anchors.left: parent.left
+                        anchors.leftMargin: 34
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Search applications..."
+                        color: theme.foregroundSoft
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 13
+                    }
+
+                    Connections {
+                        target: searchField
+                        function onTextChanged() {
+                            if (minimumSearchInput.text !== searchField.text)
+                                minimumSearchInput.text = searchField.text
+                        }
+                    }
 
                     RowLayout {
+                        visible: !root.minimum
                         anchors.fill: parent
-                        anchors.leftMargin: 16
-                        anchors.rightMargin: 12
-                        spacing: 12
+                        anchors.leftMargin: root.minimum ? 12 : 16
+                        anchors.rightMargin: root.wallpaperMode ? 132 : 12
+                        spacing: root.minimum ? 9 : 12
 
                         Text {
-                            text: "󰍉"
-                            color: root.foreground
+                            text: root.minimum ? ">" : "󰍉"
+                            color: root.minimum ? root.foreground : root.foreground
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 17
+                            font.pixelSize: root.minimum ? 16 : 17
+                            font.weight: root.minimum ? Font.Bold : Font.Normal
                         }
 
                         Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
+                            Layout.minimumHeight: root.minimum ? searchBackground.height : 0
+                            Layout.alignment: Qt.AlignVCenter
 
                             Text {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: root.wallpaperMode ? "поиск обоев…"
+                                text: root.minimum ? "search applications..."
+                                    : root.wallpaperMode ? "поиск обоев…"
                                     : root.notificationsMode ? "поиск уведомлений…"
                                     : "Введите «!» для команд"
-                                color: root.muted
+                                color: root.minimum ? theme.foregroundSoft : root.muted
                                 opacity: searchField.text.length === 0 ? 1 : 0
-                                font.family: "Noto Sans"
-                                font.pixelSize: 14
+                                font.family: root.minimum ? "JetBrainsMono Nerd Font" : "Noto Sans"
+                                font.pixelSize: root.minimum ? 13 : 14
 
                                 Behavior on opacity {
                                     NumberAnimation {
@@ -1366,19 +1649,24 @@ ShellRoot {
                                 }
                             }
 
-                            TextField {
+                            TextInput {
                                 id: searchField
 
                                 anchors.fill: parent
-                                leftPadding: 0
-                                rightPadding: 0
-                                color: root.foreground
-                                placeholderText: ""
+                                z: 2
+                                verticalAlignment: TextInput.AlignVCenter
+                                color: root.minimum ? "#ffffff" : root.foreground
+                                opacity: 1
                                 selectionColor: root.selected
                                 selectedTextColor: root.foreground
-                                font.family: "Noto Sans"
-                                font.pixelSize: 14
-                                background: null
+                                font.family: root.minimum ? "JetBrainsMono Nerd Font" : "Noto Sans"
+                                font.pixelSize: root.minimum ? 15 : 14
+                                font.weight: root.minimum ? Font.Bold : Font.Normal
+                                cursorDelegate: Rectangle {
+                                    width: 2
+                                    color: root.accent
+                                    opacity: searchField.activeFocus ? 1 : 0
+                                }
 
                                 onTextChanged: {
                                     root.keyboardNavigating = false
@@ -1387,7 +1675,9 @@ ShellRoot {
 
                                 Keys.onDownPressed: function(event) {
                                     root.keyboardNavigating = true
-                                    if (root.notificationsMode && root.notificationGroups.length > 0) {
+                                    if (root.wallpaperMode) {
+                                        root.showLiveWallpapers(false)
+                                    } else if (root.notificationsMode && root.notificationGroups.length > 0) {
                                         notificationList.currentIndex = (notificationList.currentIndex + 1) % root.notificationGroups.length
                                         notificationList.positionViewAtIndex(notificationList.currentIndex, ListView.Contain)
                                     } else if (!root.wallpaperMode && root.results.length > 0) {
@@ -1398,7 +1688,9 @@ ShellRoot {
                                 }
                                 Keys.onUpPressed: function(event) {
                                     root.keyboardNavigating = true
-                                    if (root.notificationsMode && root.notificationGroups.length > 0) {
+                                    if (root.wallpaperMode) {
+                                        root.showLiveWallpapers(true)
+                                    } else if (root.notificationsMode && root.notificationGroups.length > 0) {
                                         notificationList.currentIndex = (notificationList.currentIndex - 1 + root.notificationGroups.length) % root.notificationGroups.length
                                         notificationList.positionViewAtIndex(notificationList.currentIndex, ListView.Contain)
                                     } else if (!root.wallpaperMode && root.results.length > 0) {
@@ -1440,9 +1732,11 @@ ShellRoot {
                                     event.accepted = true
                                 }
                             }
+
                         }
 
                         Text {
+                            visible: !root.minimum
                             text: "󰅖"
                             color: root.foreground
                             opacity: searchField.text.length > 0 ? 1 : 0
@@ -1510,6 +1804,38 @@ ShellRoot {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.clearNotifications()
                             }
+                        }
+                    }
+
+                    Rectangle {
+                        id: wallpaperSortButton
+                        visible: root.wallpaperMode
+                        z: 8
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 116
+                        height: parent.height - 12
+                        radius: root.minimum ? 2 : height / 2
+                        color: wallpaperSortMouse.containsMouse ? root.selected : root.surface
+                        border.width: 1
+                        border.color: wallpaperSortMouse.containsMouse ? root.accent : theme.outline
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰒺  " + root.wallpaperSortLabel
+                            color: root.foreground
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                        }
+
+                        MouseArea {
+                            id: wallpaperSortMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.cycleWallpaperSort()
                         }
                     }
                 }

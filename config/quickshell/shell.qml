@@ -14,6 +14,31 @@ ShellRoot {
 
     Theme { id: theme }
 
+    property string interfaceStyle: "modern"
+    property string panelPosition: "left"
+    property string notificationPosition: "bottom-right"
+    property string notificationCenterPosition: "right"
+    readonly property bool minimum: interfaceStyle === "minimum"
+
+    FileView {
+        id: interfaceStyleFile
+        path: Quickshell.env("HOME") + "/.config/self-shell/interface-style.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const state = JSON.parse(text())
+                root.interfaceStyle = state.style || "modern"
+                root.panelPosition = state.panelPosition || "left"
+                root.notificationPosition = state.notificationPosition || "bottom-right"
+                root.notificationCenterPosition = state.notificationCenterPosition || "right"
+            }
+            catch (error) { root.interfaceStyle = "modern" }
+        }
+    }
+
     // Compact left rail and its native power overlay.
 
     property color foreground: theme.foreground
@@ -47,6 +72,10 @@ ShellRoot {
             return Quickshell.screens[0]
         return Quickshell.screens.find(screen => screen.name === monitor.name)
             || Quickshell.screens[0]
+    }
+
+    function weekdayShort(date) {
+        return ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][date.getDay()]
     }
 
     function removeNotification(id) {
@@ -260,15 +289,20 @@ ShellRoot {
             required property var modelData
 
             screen: modelData
+            visible: true
             color: "transparent"
             readonly property bool connectivityActive: root.connectivityMenuOpen
                 && (root.connectivityMenuScreen === null || root.connectivityMenuScreen === modelData)
             // Keep the layer-shell surface stable. Resizing this window makes
             // the compositor expose a travelling edge during close.
-            implicitWidth: 460
-            implicitHeight: 900
+            implicitWidth: root.minimum && root.panelPosition === "top" ? screen.width
+                : root.minimum ? 550 : 460
+            implicitHeight: root.minimum ? screen.height : 900
+            anchors.top: root.minimum
+            anchors.bottom: root.minimum
             anchors.left: true
-            exclusiveZone: 55
+            exclusiveZone: root.minimum && root.panelPosition === "top" ? 0
+                : root.minimum ? 38 : 55
             mask: sidebarInputRegion
             WlrLayershell.keyboardFocus: connectivityActive
                 ? WlrKeyboardFocus.OnDemand
@@ -278,14 +312,15 @@ ShellRoot {
                 id: sidebarInputRegion
                 x: 0
                 y: 0
-                width: 55
+                width: root.minimum && root.panelPosition === "top" ? 0
+                    : root.minimum ? 38 : 55
                 height: panel.height
 
                 Region {
-                    x: 55
+                    x: connectivityPanel.surfaceLeft
                     y: connectivityPanel.surfaceTop
                     width: panel.connectivityActive
-                        ? Math.max(0, connectivityPanel.surfaceRight - 55)
+                        ? connectivityPanel.surfaceRight - connectivityPanel.surfaceLeft
                         : 0
                     height: panel.connectivityActive
                         ? Math.max(0, connectivityPanel.surfaceBottom - connectivityPanel.surfaceTop)
@@ -295,6 +330,7 @@ ShellRoot {
 
             Canvas {
                 id: sidebarSurface
+                visible: !root.minimum || root.panelPosition === "left"
                 z: 0
                 anchors.fill: parent
                 antialiasing: true
@@ -330,7 +366,20 @@ ShellRoot {
                 onPaint: {
                     const ctx = getContext("2d")
                     const h = height
-                    const railRight = 55
+                    const railRight = root.minimum ? 38 : 55
+                    if (root.minimum && root.panelPosition === "top") {
+                        ctx.reset()
+                        ctx.clearRect(0, 0, width, height)
+                        ctx.fillStyle = theme.surface
+                        ctx.fillRect(0, 0, railRight, h)
+                        ctx.lineWidth = 1.5
+                        ctx.strokeStyle = theme.accent
+                        ctx.beginPath()
+                        ctx.moveTo(railRight - 0.5, 0)
+                        ctx.lineTo(railRight - 0.5, h)
+                        ctx.stroke()
+                        return
+                    }
                     const p = panel.connectivityActive
                         ? connectivityPanel.revealProgress
                         : 0
@@ -338,18 +387,51 @@ ShellRoot {
                     const bottom = connectivityPanel.surfaceBottom
                     const right = railRight + (connectivityPanel.surfaceRight - railRight) * p
                     const extensionWidth = Math.max(0, right - railRight)
+                    if (root.minimum) {
+                        ctx.reset()
+                        ctx.clearRect(0, 0, width, height)
+                        ctx.beginPath()
+                        ctx.moveTo(0, 0)
+                        ctx.lineTo(railRight, 0)
+                        ctx.lineTo(railRight, top)
+                        if (p > 0.001) {
+                            ctx.lineTo(right, top)
+                            ctx.lineTo(right, bottom)
+                            ctx.lineTo(railRight, bottom)
+                        }
+                        ctx.lineTo(railRight, h)
+                        ctx.lineTo(0, h)
+                        ctx.closePath()
+                        ctx.fillStyle = theme.background
+                        ctx.fill()
+                        ctx.lineWidth = 1
+                        ctx.strokeStyle = theme.accent
+                        ctx.beginPath()
+                        ctx.moveTo(railRight - 0.5, 0)
+                        ctx.lineTo(railRight - 0.5, top)
+                        if (p > 0.001) {
+                            ctx.lineTo(right - 0.5, top)
+                            ctx.lineTo(right - 0.5, bottom)
+                            ctx.lineTo(railRight - 0.5, bottom)
+                        }
+                        ctx.lineTo(railRight - 0.5, h)
+                        ctx.stroke()
+                        return
+                    }
                     // Preserve a capsule-like leading edge while collapsing;
                     // only reduce the radius when the remaining width itself
                     // becomes narrower than the full corner diameter.
-                    const radius = Math.min(22, extensionWidth / 2)
-                    const shoulder = Math.min(18, extensionWidth / 2)
+                    const radius = root.minimum ? Math.min(6, extensionWidth / 2)
+                        : Math.min(22, extensionWidth / 2)
+                    const shoulder = root.minimum ? Math.min(6, extensionWidth / 2)
+                        : Math.min(18, extensionWidth / 2)
                     const lowerShoulder = Math.min(shoulder, Math.max(0, h - 9 - bottom))
 
                     ctx.reset()
                     ctx.clearRect(0, 0, width, height)
                     ctx.beginPath()
                     ctx.moveTo(0, 0)
-                    ctx.lineTo(46, 0)
+                    ctx.lineTo(root.minimum ? 31 : 46, 0)
                     ctx.quadraticCurveTo(railRight, 0, railRight, 9)
                     ctx.lineTo(railRight, top - shoulder)
 
@@ -368,7 +450,7 @@ ShellRoot {
                     }
 
                     ctx.lineTo(railRight, h - 9)
-                    ctx.quadraticCurveTo(railRight, h, 46, h)
+                    ctx.quadraticCurveTo(railRight, h, root.minimum ? 31 : 46, h)
                     ctx.lineTo(0, h)
                     ctx.closePath()
                     // Exact launcher surface and outline colours.
@@ -391,10 +473,10 @@ ShellRoot {
                         ctx.globalAlpha = compactAlpha
                         ctx.beginPath()
                         ctx.moveTo(0, 0)
-                        ctx.lineTo(46, 0)
+                        ctx.lineTo(root.minimum ? 31 : 46, 0)
                         ctx.quadraticCurveTo(railRight, 0, railRight, 9)
                         ctx.lineTo(railRight, h - 9)
-                        ctx.quadraticCurveTo(railRight, h, 46, h)
+                        ctx.quadraticCurveTo(railRight, h, root.minimum ? 31 : 46, h)
                         ctx.lineTo(0, h)
                         ctx.closePath()
                         ctx.stroke()
@@ -407,11 +489,12 @@ ShellRoot {
 
             Rectangle {
                 id: rail
+                visible: !root.minimum || root.panelPosition === "left"
                 z: 2
-                x: -9
+                x: root.minimum ? 0 : -9
                 // The layer window grows to host popouts, but the visible rail
                 // must always retain its compact width.
-                width: 64
+                width: root.minimum ? 38 : 64
                 height: parent.height
                 radius: 9
                 // Content-only rail: sidebarSurface owns the one shared shape.
@@ -423,7 +506,7 @@ ShellRoot {
                 Column {
                     id: workspaces
                     anchors.top: parent.top
-                    anchors.topMargin: 18
+                    anchors.topMargin: root.minimum ? 5 : 18
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 2
 
@@ -432,23 +515,25 @@ ShellRoot {
 
                         delegate: Item {
                             required property var modelData
-                            width: 44
-                            height: 34
+                            width: root.minimum ? 38 : 44
+                            height: root.minimum ? 27 : 34
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 32
-                                height: 28
-                                radius: 6
-                                color: workspaceMouse.containsMouse ? theme.hover : "transparent"
+                                width: root.minimum ? 30 : 32
+                                height: root.minimum ? 23 : 28
+                                radius: root.minimum ? 4 : 6
+                                color: modelData.focused && root.minimum ? theme.selected
+                                    : workspaceMouse.containsMouse ? theme.hover : "transparent"
                             }
 
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData.name
-                                color: modelData.focused ? root.foreground : root.muted
+                                color: modelData.focused && root.minimum ? theme.accentForeground
+                                    : modelData.focused ? root.foreground : root.muted
                                 font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: 11
+                                font.pixelSize: root.minimum ? 9 : 11
                                 font.weight: modelData.focused ? Font.Bold : Font.Medium
                             }
 
@@ -465,34 +550,44 @@ ShellRoot {
 
                 Column {
                     anchors.centerIn: parent
-                    spacing: 20
+                    spacing: root.minimum ? 6 : 12
 
                     Text {
-                        width: 44
+                        width: root.minimum ? 38 : 44
                         horizontalAlignment: Text.AlignHCenter
                         text: Qt.formatDateTime(clock.date, "HH\nmm")
                         color: root.foreground
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 15
+                        font.pixelSize: root.minimum ? 12 : 17
                         font.weight: Font.Bold
                         lineHeight: 1.15
                     }
 
                     Text {
-                        width: 44
+                        width: root.minimum ? 38 : 44
+                        horizontalAlignment: Text.AlignHCenter
+                        text: root.weekdayShort(clock.date)
+                        color: root.accent
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: root.minimum ? 9 : 11
+                        font.weight: Font.Bold
+                    }
+
+                    Text {
+                        width: root.minimum ? 38 : 44
                         horizontalAlignment: Text.AlignHCenter
                         text: Qt.formatDateTime(clock.date, "dd\nMM")
                         color: root.muted
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 9
+                        font.pixelSize: root.minimum ? 9 : 10
                         font.weight: Font.DemiBold
-                        lineHeight: 1.3
+                        lineHeight: 1.25
                     }
                 }
 
                 Column {
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 14
+                    anchors.bottomMargin: root.minimum ? 4 : 14
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 0
 
@@ -582,9 +677,152 @@ ShellRoot {
                 z: 3
                 anchors.fill: parent
                 page: root.connectivityPage
+                railWidth: root.minimum ? 38 : 55
+                fromTop: root.minimum && root.panelPosition === "top"
+                standaloneSurface: root.minimum && root.panelPosition === "top"
+                compactMode: root.minimum
                 keyboardLayout: root.keyboardLayout
                 visible: panel.connectivityActive
                 onCloseRequested: root.connectivityMenuOpen = false
+            }
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: topPanel
+            required property var modelData
+            screen: modelData
+            visible: root.minimum && root.panelPosition === "top"
+            anchors.top: true
+            anchors.left: true
+            anchors.right: true
+            implicitHeight: 38
+            exclusiveZone: 38
+            color: theme.surface
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+            Rectangle {
+                anchors.fill: parent
+                color: theme.surface
+                border.width: 1
+                border.color: theme.accent
+            }
+
+            Row {
+                anchors.left: parent.left
+                anchors.leftMargin: 7
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+                Repeater {
+                    model: Hyprland.workspaces
+                    delegate: Rectangle {
+                        id: topWorkspace
+                        required property var modelData
+                        width: 28; height: 25; radius: 4
+                        color: modelData.focused ? theme.selected
+                            : topWorkspaceMouse.containsMouse ? theme.hover : "transparent"
+                        Text {
+                            anchors.centerIn: parent
+                            text: topWorkspace.modelData.name
+                            color: topWorkspace.modelData.focused ? theme.accentForeground : root.muted
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 9
+                            font.weight: Font.Bold
+                        }
+                        MouseArea {
+                            id: topWorkspaceMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: topWorkspace.modelData.activate()
+                        }
+                    }
+                }
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: root.weekdayShort(clock.date) + "  " + Qt.formatDateTime(clock.date, "dd.MM  HH:mm")
+                color: root.foreground
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 10
+                font.weight: Font.DemiBold
+            }
+
+            Row {
+                anchors.right: parent.right
+                anchors.rightMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 12
+                Text {
+                    id: topLayoutButton
+                    text: {
+                        const map = {"English (US)":"EN", "English":"EN", "Russian":"RU", "Ukrainian":"UA", "German":"DE"}
+                        return map[root.keyboardLayout] || root.keyboardLayout.slice(0, 2).toUpperCase()
+                    }
+                    color: root.muted
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 9
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -7
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.connectivityPage = "keyboard"
+                            root.connectivityMenuScreen = topPanel.screen
+                            root.connectivityMenuOpen = true
+                        }
+                    }
+                }
+                Text {
+                    text: Networking.wifiEnabled ? "" : "󰤮"
+                    color: Networking.wifiEnabled ? root.foreground : root.accent
+                    font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 11
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -7
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.connectivityPage = "wifi"
+                            root.connectivityMenuScreen = topPanel.screen
+                            root.connectivityMenuOpen = true
+                        }
+                    }
+                }
+                Text {
+                    readonly property var adapter: Bluetooth.defaultAdapter
+                    readonly property bool connected: Bluetooth.devices.values.some(device => device.connected)
+                    text: connected ? "󰂱" : (adapter && adapter.enabled ? "󰂯" : "󰂲")
+                    color: adapter && adapter.enabled ? root.foreground : root.accent
+                    font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 11
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -7
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.connectivityPage = "bluetooth"
+                            root.connectivityMenuScreen = topPanel.screen
+                            root.connectivityMenuOpen = true
+                        }
+                    }
+                }
+                Text {
+                    readonly property var sink: Pipewire.defaultAudioSink
+                    readonly property var audio: sink ? sink.audio : null
+                    text: !audio || audio.muted ? "󰝟" : (audio.volume < 0.5 ? "" : "")
+                    color: audio && audio.muted ? root.accent : root.foreground
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 11
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -7
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.connectivityPage = "audio"
+                            root.connectivityMenuScreen = topPanel.screen
+                            root.connectivityMenuOpen = true
+                        }
+                    }
+                }
             }
         }
     }
@@ -618,6 +856,8 @@ ShellRoot {
             entries: root.notificationEntries
             dnd: root.notificationDnd
             grouped: root.notificationGrouping
+            minimal: root.minimum
+            placement: root.notificationCenterPosition
             onCloseRequested: root.notificationCenterOpen = false
             onClearRequested: root.clearNotifications()
             onDndToggleRequested: root.notificationDnd = !root.notificationDnd
@@ -636,6 +876,8 @@ ShellRoot {
             visible: root.toastEntries.length > 0 && root.toastScreen === modelData
             entries: root.toastEntries
             closing: root.toastClosing
+            minimal: root.minimum
+            placement: root.notificationPosition
             onDismissRequested: notification => root.dismissNotification(notification)
         }
     }

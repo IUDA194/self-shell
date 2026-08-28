@@ -8,10 +8,15 @@ QtObject {
     // Единственный источник цветов оболочки. Компоненты используют только эти
     // базовые и семантические токены, поэтому смена схемы не потребует их правки.
     property var palette: ({})
-    property color background: palette.background || "#26201d"
-    property color surface: palette.surface || "#372d29"
-    property color surfaceAlt: palette.surfaceAlt || "#4f443e"
-    property color selected: palette.selected || "#756054"
+    property real interfaceOpacity: 0.94
+    property color opaqueBackground: palette.background || "#26201d"
+    property color opaqueSurface: palette.surface || "#372d29"
+    property color opaqueSurfaceAlt: palette.surfaceAlt || "#4f443e"
+    property color opaqueSelected: palette.selected || "#756054"
+    property color background: Qt.rgba(opaqueBackground.r, opaqueBackground.g, opaqueBackground.b, interfaceOpacity)
+    property color surface: Qt.rgba(opaqueSurface.r, opaqueSurface.g, opaqueSurface.b, interfaceOpacity)
+    property color surfaceAlt: Qt.rgba(opaqueSurfaceAlt.r, opaqueSurfaceAlt.g, opaqueSurfaceAlt.b, interfaceOpacity)
+    property color selected: Qt.rgba(opaqueSelected.r, opaqueSelected.g, opaqueSelected.b, interfaceOpacity)
     property color foreground: palette.foreground || "#ddd3c6"
     property color foregroundSoft: palette.foregroundSoft || "#cfc5ba"
     property color muted: palette.muted || "#9a8b80"
@@ -35,6 +40,22 @@ QtObject {
                 root.palette = parsed.colors || parsed
             } catch (error) {
                 root.palette = ({})
+            }
+        }
+    }
+
+    property FileView appearanceFile: FileView {
+        path: Quickshell.env("HOME") + "/.config/self-shell/interface-style.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const value = Number(JSON.parse(text()).opacity)
+                root.interfaceOpacity = isNaN(value) ? 0.94 : Math.max(0.35, Math.min(1, value))
+            } catch (error) {
+                root.interfaceOpacity = 0.94
             }
         }
     }
