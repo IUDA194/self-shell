@@ -9,6 +9,8 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
+    readonly property bool isNiri: Quickshell.env("NIRI_SOCKET").length > 0
+
     Theme { id: theme }
 
     // Native password-store picker.
@@ -138,6 +140,8 @@ ShellRoot {
 
     PanelWindow {
         screen: {
+            if (root.isNiri)
+                return Quickshell.screens[0]
             const monitor = Hyprland.focusedMonitor
             if (!monitor)
                 return Quickshell.screens[0]

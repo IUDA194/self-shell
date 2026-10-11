@@ -19,6 +19,12 @@ ShellRoot {
     property string notificationPosition: "bottom-right"
     property string notificationCenterPosition: "right"
     readonly property bool minimum: interfaceStyle === "minimum"
+    // SELF_SHELL_COMPOSITOR is optional; use the active Wayland session too so
+    // a manually restarted panel still controls Niri rather than Hyprland.
+    readonly property bool isNiri: Quickshell.env("SELF_SHELL_COMPOSITOR") === "niri"
+        || Quickshell.env("NIRI_SOCKET").length > 0
+        || Quickshell.env("XDG_CURRENT_DESKTOP").toLowerCase().indexOf("niri") >= 0
+    property var niriWorkspaces: []
 
     FileView {
         id: interfaceStyleFile
@@ -67,6 +73,8 @@ ShellRoot {
     }
 
     function focusedScreen() {
+        if (isNiri)
+            return Quickshell.screens[0]
         const monitor = Hyprland.focusedMonitor
         if (!monitor)
             return Quickshell.screens[0]
@@ -188,6 +196,14 @@ ShellRoot {
         }
     }
 
+    IpcHandler {
+        target: "panel"
+
+        function refreshKeyboardLayout(): void {
+            layoutProcess.running = true
+        }
+    }
+
     Timer {
         id: toastTimer
         interval: 5000
@@ -218,7 +234,9 @@ ShellRoot {
 
     Process {
         id: layoutProcess
-        command: ["bash", "-lc", "hyprctl devices -j | jq -r '.keyboards[] | select(.main == true) | .active_keymap' | head -1"]
+        command: ["bash", "-lc", root.isNiri
+            ? "niri msg -j keyboard-layouts | jq -r '.names[.current_idx] // .current_layout // empty'"
+            : "hyprctl devices -j | jq -r '.keyboards[] | select(.main == true) | .active_keymap' | head -1"]
         running: true
         stdout: StdioCollector {
             id: layoutOutput
@@ -227,6 +245,18 @@ ShellRoot {
                 if (value.length > 0)
                     root.keyboardLayout = value
                 layoutTimer.restart()
+            }
+        }
+    }
+
+    Process {
+        id: niriWorkspacesProcess
+        command: ["niri", "msg", "-j", "workspaces"]
+        running: root.isNiri
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.niriWorkspaces = JSON.parse(text) }
+                catch (error) { root.niriWorkspaces = [] }
             }
         }
     }
@@ -253,10 +283,16 @@ ShellRoot {
     Timer {
         id: layoutTimer
         // Fallback only; normal updates arrive immediately through Hyprland IPC.
-        interval: 10000
+        // Niri's Win+Space binding sends a direct IPC refresh. This remains a
+        // fallback for changes initiated outside the self-shell controls.
+        interval: 1000
         running: true
         repeat: true
-        onTriggered: layoutProcess.running = true
+        onTriggered: {
+            layoutProcess.running = true
+            if (root.isNiri)
+                niriWorkspacesProcess.running = true
+        }
     }
 
     Timer {
@@ -269,6 +305,7 @@ ShellRoot {
 
     Connections {
         target: Hyprland
+        enabled: !root.isNiri
 
         function onRawEvent(event) {
             if (event.name !== "activelayout")
@@ -511,7 +548,7 @@ ShellRoot {
                     spacing: 2
 
                     Repeater {
-                        model: Hyprland.workspaces
+                        model: root.isNiri ? root.niriWorkspaces : Hyprland.workspaces
 
                         delegate: Item {
                             required property var modelData
@@ -523,15 +560,15 @@ ShellRoot {
                                 width: root.minimum ? 30 : 32
                                 height: root.minimum ? 23 : 28
                                 radius: root.minimum ? 4 : 6
-                                color: modelData.focused && root.minimum ? theme.selected
+                                color: (root.isNiri ? modelData.is_focused : modelData.focused) && root.minimum ? theme.selected
                                     : workspaceMouse.containsMouse ? theme.hover : "transparent"
                             }
 
                             Text {
                                 anchors.centerIn: parent
-                                text: modelData.name
-                                color: modelData.focused && root.minimum ? theme.accentForeground
-                                    : modelData.focused ? root.foreground : root.muted
+                                text: root.isNiri ? (modelData.name || modelData.idx) : modelData.name
+                                color: (root.isNiri ? modelData.is_focused : modelData.focused) && root.minimum ? theme.accentForeground
+                                    : (root.isNiri ? modelData.is_focused : modelData.focused) ? root.foreground : root.muted
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: root.minimum ? 9 : 11
                                 font.weight: modelData.focused ? Font.Bold : Font.Medium
@@ -542,7 +579,12 @@ ShellRoot {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: modelData.activate()
+                                onClicked: {
+                                    if (root.isNiri)
+                                        Quickshell.execDetached(["niri", "msg", "action", "focus-workspace", String(modelData.idx)])
+                                    else
+                                        modelData.activate()
+                                }
                             }
                         }
                     }
@@ -682,6 +724,7 @@ ShellRoot {
                 standaloneSurface: root.minimum && root.panelPosition === "top"
                 compactMode: root.minimum
                 keyboardLayout: root.keyboardLayout
+                isNiri: root.isNiri
                 visible: panel.connectivityActive
                 onCloseRequested: root.connectivityMenuOpen = false
             }
@@ -717,17 +760,17 @@ ShellRoot {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
                 Repeater {
-                    model: Hyprland.workspaces
+                    model: root.isNiri ? root.niriWorkspaces : Hyprland.workspaces
                     delegate: Rectangle {
                         id: topWorkspace
                         required property var modelData
                         width: 28; height: 25; radius: 4
-                        color: modelData.focused ? theme.selected
+                        color: (root.isNiri ? modelData.is_focused : modelData.focused) ? theme.selected
                             : topWorkspaceMouse.containsMouse ? theme.hover : "transparent"
                         Text {
                             anchors.centerIn: parent
-                            text: topWorkspace.modelData.name
-                            color: topWorkspace.modelData.focused ? theme.accentForeground : root.muted
+                            text: root.isNiri ? (topWorkspace.modelData.name || topWorkspace.modelData.idx) : topWorkspace.modelData.name
+                            color: (root.isNiri ? topWorkspace.modelData.is_focused : topWorkspace.modelData.focused) ? theme.accentForeground : root.muted
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 9
                             font.weight: Font.Bold
@@ -737,7 +780,12 @@ ShellRoot {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: topWorkspace.modelData.activate()
+                            onClicked: {
+                                if (root.isNiri)
+                                    Quickshell.execDetached(["niri", "msg", "action", "focus-workspace", String(topWorkspace.modelData.idx)])
+                                else
+                                    topWorkspace.modelData.activate()
+                            }
                         }
                     }
                 }

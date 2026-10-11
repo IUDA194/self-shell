@@ -7,6 +7,7 @@ import Quickshell.Wayland
 
 ShellRoot {
     id: root
+    readonly property bool isNiri: Quickshell.env("NIRI_SOCKET").length > 0
     Theme { id: theme }
     property bool showPassword: false
     property bool submitted: false
@@ -31,6 +32,8 @@ ShellRoot {
 
     PanelWindow {
         screen: {
+            if (root.isNiri)
+                return Quickshell.screens[0]
             const monitor = Hyprland.focusedMonitor
             return monitor ? Quickshell.screens.find(s => s.name === monitor.name) : Quickshell.screens[0]
         }

@@ -33,7 +33,7 @@ link_path() {
 install_fedora_packages() {
   local packages=(
     bash breeze-cursor-theme btop brightnessctl cargo curl dnf5-plugins fastfetch fd-find fish fontconfig gcc git
-    grim hyprland hyprlock hyprsunset ImageMagick jq kde-connect kitty libnotify lz4-devel meson mpv-devel nautilus
+    grim hyprland hyprlock hyprsunset ImageMagick jq kde-connect kitty libnotify lz4-devel meson mpv-devel nautilus niri
     NetworkManager neovim ninja-build pass plocate playerctl pkgconf-pkg-config
     python3 python3-pip qt6-qtimageformats qt6-qtmultimedia qt6-qtsvg qt6-qtvirtualkeyboard
     ripgrep rofi scdoc sddm slurp sqlite tesseract tesseract-langpack-eng
@@ -78,7 +78,7 @@ install_quickshell_fedora() {
 install_arch_packages() {
   local packages=(
     awww bash breeze btop brightnessctl curl fastfetch fd fish fontconfig gcc git
-    grim hyprland hyprlock hyprsunset imagemagick jq kdeconnect kitty libnotify meson mpv nautilus networkmanager
+    grim hyprland hyprlock hyprsunset imagemagick jq kdeconnect kitty libnotify meson mpv nautilus networkmanager niri
     neovim ninja pass plocate playerctl python ripgrep rofi sddm slurp sqlite tesseract
     tesseract-data-eng tesseract-data-rus tmux
     qt6-imageformats qt6-multimedia qt6-svg qt6-virtualkeyboard
@@ -243,7 +243,7 @@ if [[ "${SELF_SHELL_SKIP_PACKAGES:-0}" != 1 ]]; then
 fi
 
 log 'Linking the complete configuration'
-for name in fish kitty tmux fastfetch btop quickshell hypr waypaper; do
+for name in fish kitty tmux fastfetch btop quickshell hypr niri waypaper; do
   link_path "$repo_dir/config/$name" "$HOME/.config/$name"
 done
 

@@ -1,6 +1,6 @@
 # self-shell
 
-Полностью переносимое окружение для Hyprland: весь Quickshell (панель,
+Полностью переносимое окружение для Hyprland и Niri: весь Quickshell (панель,
 уведомления, launcher, dashboard, clipboard, password picker и выбор обоев),
 Fish + Tide, tmux, Kitty, Neovim, Fastfetch, btop и `awww`.
 
@@ -33,12 +33,14 @@ bash -c 'set -e; if ! command -v git >/dev/null; then if command -v dnf >/dev/nu
 - подключает все конфиги симлинками и сохраняет заменённые файлы в backup;
 - делает Fish login-shell. Интерактивный Fish автоматически открывает или
   создаёт tmux-сессию `main`;
-- при старте Hyprland запускает обои через `awww`, всю панель Quickshell,
-  launcher, уведомления, dashboard и clipboard watcher.
+- при старте Hyprland и Niri запускает обои через `awww`, всю панель
+  Quickshell, launcher, уведомления, dashboard и clipboard watcher.
 
-После установки выберите сессию Hyprland в дисплейном менеджере и откройте
-Kitty. Если сессия уже запущена, перелогиньтесь, чтобы применился новый
-login-shell.
+После установки выберите сессию Hyprland или Niri в дисплейном менеджере и
+откройте Kitty. Если сессия уже запущена, выйдите из неё и выберите другую
+сессию в SDDM. В Niri доступны та же панель Quickshell, launcher, уведомления,
+clipboard, password picker, dashboard и выбор обоев; рабочие пространства
+панель получает через `niri msg`.
 
 ## Режимы установки
 
@@ -70,6 +72,7 @@ SELF_SHELL_OFFLINE=1 SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 
 - `config/hypr` — полный Hyprland-конфиг и все дополнительные Quickshell
   экраны/backend-скрипты;
+- `config/niri` — конфигурация Niri с Quickshell, общими обоями и хоткеями;
 - `config/quickshell` — панель, центр и toast-уведомления, power menu и
   сетевые скрипты;
 - `config/tmux` и `home/.tmux.conf` — tmux вместе с автозапуском Fish;

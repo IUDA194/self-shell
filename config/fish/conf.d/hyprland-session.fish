@@ -1,7 +1,12 @@
 # A long-lived tmux server can retain the environment of an old Hyprland
 # instance. Refresh the signature from the newest live control socket so
 # hyprctl and Quickshell launched from new panes reach the current compositor.
-if set -q XDG_RUNTIME_DIR; and test -d "$XDG_RUNTIME_DIR/hypr"
+if set -q NIRI_SOCKET
+    set -e HYPRLAND_INSTANCE_SIGNATURE
+    if set -q TMUX
+        command tmux set-environment -gu HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null
+    end
+else if set -q XDG_RUNTIME_DIR; and test -d "$XDG_RUNTIME_DIR/hypr"
     set -l active_hypr_socket (command find "$XDG_RUNTIME_DIR/hypr" \
         -mindepth 2 -maxdepth 2 -type s -name .socket.sock \
         -printf '%T@ %h\n' 2>/dev/null | command sort -nr | command head -n 1)
@@ -17,8 +22,9 @@ if set -q XDG_RUNTIME_DIR; and test -d "$XDG_RUNTIME_DIR/hypr"
     end
 end
 
-# Qt requires UTF-8 and Arch provides C.UTF-8 even on minimally configured
-# systems. Preserve any explicitly configured non-C locale.
-if not set -q LANG; or contains -- "$LANG" C POSIX
-    set -gx LANG C.UTF-8
+# Qt requires a locale that is actually installed.  Fedora/Arch minimal
+# installations commonly provide only C.utf8, while a stale en_US.UTF-8
+# setting makes Kitty fail locale initialization.
+if not set -q LANG; or not command locale -a 2>/dev/null | string match -q -i -e -- "$LANG"
+    set -gx LANG C.utf8
 end

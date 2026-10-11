@@ -9,6 +9,7 @@ import Quickshell.Wayland
 
 ShellRoot {
     id: root
+    readonly property bool isNiri: Quickshell.env("NIRI_SOCKET").length > 0
 
     Theme { id: theme }
 
@@ -39,6 +40,8 @@ ShellRoot {
     property bool systemNtp: false
     property bool systemSynchronized: false
     property string systemStatus: ""
+    property string selectedSession: "hyprland"
+    property string pendingSession: ""
     property var timezoneOptions: ["UTC"]
     property string updateMode: "off"
     property int updateDays: 7
@@ -52,11 +55,13 @@ ShellRoot {
         { id: "solarized-light", name: "Solarized Light", description: "Мягкая светлая", accent: "#268bd2", colors: ["#fdf6e3", "#eee8d5", "#268bd2"] },
         { id: "latte", name: "Catppuccin Latte", description: "Пастельная светлая", accent: "#1e66f5", colors: ["#eff1f5", "#dce0e8", "#1e66f5"] },
         { id: "rose-dawn", name: "Rosé Pine Dawn", description: "Тёплая светлая", accent: "#907aa9", colors: ["#faf4ed", "#f2e9e1", "#907aa9"] },
+        { id: "rose-pine-moon", name: "Rosé Pine Moon", description: "Лиловая ночная", accent: "#c4a7e7", colors: ["#232136", "#393552", "#c4a7e7"] },
         { id: "dracula", name: "Dracula", description: "Контрастная тёмная", accent: "#bd93f9", colors: ["#282a36", "#44475a", "#bd93f9"] },
         { id: "tokyo-night", name: "Tokyo Night", description: "Синяя ночная", accent: "#7aa2f7", colors: ["#1a1b26", "#292e42", "#7aa2f7"] },
         { id: "one-light", name: "One Light", description: "Редакторская светлая", accent: "#4078f2", colors: ["#fafafa", "#e5e5e6", "#4078f2"] },
         { id: "github-light", name: "GitHub Light", description: "Чистая интерфейсная", accent: "#0969da", colors: ["#ffffff", "#d8dee4", "#0969da"] },
         { id: "everforest-light", name: "Everforest Light", description: "Природная светлая", accent: "#8da101", colors: ["#fdf6e3", "#e8e5d5", "#8da101"] },
+        { id: "everforest-dark", name: "Everforest Dark", description: "Природная тёмная", accent: "#a7c080", colors: ["#2b3339", "#3a454a", "#a7c080"] },
         { id: "ayu-light", name: "Ayu Light", description: "Тёплая редакторская", accent: "#ff9940", colors: ["#fafafa", "#e7e8e9", "#ff9940"] },
         { id: "iceberg", name: "Iceberg", description: "Холодная сумеречная", accent: "#84a0c6", colors: ["#161821", "#2e313f", "#84a0c6"] },
         { id: "monokai", name: "Monokai", description: "Яркая классическая", accent: "#a6e22e", colors: ["#272822", "#49483e", "#a6e22e"] },
@@ -68,6 +73,8 @@ ShellRoot {
         { id: "kanagawa", name: "Kanagawa", description: "Мягкая японская", colors: ["#f2ecce", "#e6c384", "#98bb6c"] },
         { id: "gruvbox", name: "Gruvbox", description: "Тёплая ретро", colors: ["#fbf1c7", "#fabd2f", "#b8bb26"] },
         { id: "nord", name: "Nord", description: "Холодная северная", colors: ["#ffffff", "#8fdaec", "#b8d49c"] },
+        { id: "rose-pine-moon", name: "Rosé Pine Moon", description: "Лиловая ночная", colors: ["#e0def4", "#c4a7e7", "#9ccfd8"] },
+        { id: "everforest-dark", name: "Everforest Dark", description: "Природная тёмная", colors: ["#d3c6aa", "#a7c080", "#83c092"] },
         { id: "custom", name: "Свой цвет", description: "Открыть палитру", colors: [customTextColor, Qt.lighter(customTextColor, 1.35), Qt.darker(customTextColor, 1.35)] }
     ]
 
@@ -154,6 +161,11 @@ ShellRoot {
             action, value
         ])
     }
+    function selectSession(session) {
+        if (systemActionProcess.running) return
+        pendingSession = session
+        runSystemAction("switch-session", session)
+    }
     function loadUpdateState(raw) {
         try {
             const state = JSON.parse(raw)
@@ -226,14 +238,12 @@ ShellRoot {
     }
     FileView {
         id: textCustomColorFile
-        path: Quickshell.env("HOME") + "/.config/self-shell/wallpaper-text-colors.json"
+        path: Quickshell.env("HOME") + "/.config/self-shell/terminal-custom-color.json"
         blockLoading: true; watchChanges: true; printErrors: false
         onFileChanged: reload()
         onLoaded: {
             try {
-                const colors = JSON.parse(text())
-                const wall = root.selectedWallpaper()
-                root.customTextColor = wall && colors[wall.path] ? colors[wall.path] : "#b58e66"
+                root.customTextColor = JSON.parse(text()).color || "#b58e66"
             } catch (error) { root.customTextColor = "#b58e66" }
         }
     }
@@ -277,6 +287,7 @@ ShellRoot {
                     root.systemTimezone = state.timezone || "UTC"
                     root.systemNtp = Boolean(state.ntp)
                     root.systemSynchronized = Boolean(state.synchronized)
+                    root.selectedSession = state.session === "niri" ? "niri" : "hyprland"
                     root.systemStatus = ""
                 } catch (error) {
                     root.systemStatus = "Не удалось получить состояние времени"
@@ -297,7 +308,13 @@ ShellRoot {
     Process {
         id: systemActionProcess
         onExited: function(exitCode, exitStatus) {
-            root.systemStatus = exitCode === 0 ? "Готово" : "Изменение отменено или завершилось ошибкой"
+            if (exitCode === 0 && root.pendingSession.length > 0) {
+                root.selectedSession = root.pendingSession
+                root.systemStatus = "Переключение сеанса…"
+            } else {
+                root.systemStatus = exitCode === 0 ? "Готово" : "Изменение отменено или завершилось ошибкой"
+            }
+            root.pendingSession = ""
             root.refreshSystemState()
         }
     }
@@ -363,9 +380,9 @@ ShellRoot {
         PanelWindow {
             required property var modelData
             screen: modelData
-            visible: root.shown && modelData === (Hyprland.focusedMonitor
+            visible: root.shown && modelData === (root.isNiri ? Quickshell.screens[0] : (Hyprland.focusedMonitor
                 ? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor.name)
-                : Quickshell.screens[0])
+                : Quickshell.screens[0]))
             anchors { top: true; right: true; bottom: true; left: true }
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
@@ -717,9 +734,9 @@ ShellRoot {
                             }
 
                             RowLayout { Layout.fillWidth: true
-                                Text { text: "Тема текста"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 15; font.weight: Font.DemiBold }
+                                Text { text: "Тема терминала"; color: theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 15; font.weight: Font.DemiBold }
                                 Item { Layout.fillWidth: true }
-                                Text { text: "Fish · Vim"; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 10 }
+                                Text { text: "Fish · tmux · не зависит от обоев"; color: theme.muted; font.family: "Noto Sans"; font.pixelSize: 10 }
                             }
 
                             GridLayout {
@@ -811,6 +828,60 @@ ShellRoot {
                                                 hoverEnabled: true
                                                 cursorShape: Qt.PointingHandCursor
                                                 onClicked: root.runSystemAction("hard-reload", "")
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: theme.outline }
+
+                                    Text {
+                                        text: "Сеанс рабочего стола"
+                                        color: theme.foreground
+                                        font.family: "Noto Sans"
+                                        font.pixelSize: 11
+                                        font.weight: Font.DemiBold
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: "Выбор завершит текущий сеанс. SDDM откроется с выбранным вариантом."
+                                        color: theme.muted
+                                        font.family: "Noto Sans"
+                                        font.pixelSize: 9
+                                        wrapMode: Text.WordWrap
+                                    }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 10
+
+                                        Repeater {
+                                            model: [
+                                                { id: "hyprland", name: "Hyprland", icon: "󰖯" },
+                                                { id: "niri", name: "Niri", icon: "󰄭" }
+                                            ]
+                                            delegate: Rectangle {
+                                                required property var modelData
+                                                Layout.fillWidth: true
+                                                Layout.preferredHeight: 48
+                                                radius: 13
+                                                color: root.selectedSession === modelData.id
+                                                    ? theme.accentSubtle : sessionMouse.containsMouse ? theme.surfaceAlt : theme.surface
+                                                border.width: root.selectedSession === modelData.id ? 1 : 0
+                                                border.color: theme.accent
+                                                Row {
+                                                    anchors.centerIn: parent
+                                                    spacing: 8
+                                                    Text { text: modelData.icon; color: root.selectedSession === modelData.id ? theme.accent : theme.foreground; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 15 }
+                                                    Text { text: modelData.name; color: theme.foreground; font.family: "Noto Sans"; font.pixelSize: 11; font.weight: Font.DemiBold }
+                                                }
+                                                MouseArea {
+                                                    id: sessionMouse
+                                                    anchors.fill: parent
+                                                    hoverEnabled: true
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onClicked: root.selectSession(modelData.id)
+                                                }
                                             }
                                         }
                                     }

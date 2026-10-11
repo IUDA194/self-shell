@@ -19,6 +19,7 @@ Item {
     property bool fromTop: false
     property bool standaloneSurface: false
     property bool compactMode: false
+    property bool isNiri: false
     property string keyboardLayout: "English (US)"
     property var networks: []
     property string activeSsid: ""
@@ -483,12 +484,23 @@ Item {
                     LayoutRow {
                         shortName: "EN"
                         selected: window.keyboardLayout.indexOf("English") >= 0
-                        onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "0"])
+                        onClicked: Quickshell.execDetached(window.isNiri
+                            ? ["niri", "msg", "action", "switch-layout", "0"]
+                            : ["hyprctl", "switchxkblayout", "all", "0"])
                     }
                     LayoutRow {
                         shortName: "RU"
                         selected: window.keyboardLayout.indexOf("Russian") >= 0
-                        onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "1"])
+                        onClicked: Quickshell.execDetached(window.isNiri
+                            ? ["niri", "msg", "action", "switch-layout", "1"]
+                            : ["hyprctl", "switchxkblayout", "all", "1"])
+                    }
+                    LayoutRow {
+                        shortName: "UA"
+                        selected: window.keyboardLayout.indexOf("Ukrainian") >= 0
+                        onClicked: Quickshell.execDetached(window.isNiri
+                            ? ["niri", "msg", "action", "switch-layout", "2"]
+                            : ["hyprctl", "switchxkblayout", "all", "2"])
                     }
                 }
 

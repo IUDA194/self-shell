@@ -11,6 +11,7 @@ ShellRoot {
     id: root
 
     Theme { id: theme }
+    readonly property bool isNiri: Quickshell.env("NIRI_SOCKET").length > 0
 
     property string interfaceStyle: "modern"
     property string launcherPosition: "center"
@@ -53,7 +54,7 @@ ShellRoot {
     ]
     readonly property var systemActions: [
         { name: "Заблокировать", description: "Заблокировать текущий сеанс", category: "Сеанс", icon: "system-lock-screen", symbol: "", command: Quickshell.env("HOME") + "/.config/hypr/hyprlock-current.sh" },
-        { name: "Выйти", description: "Завершить сеанс Hyprland", category: "Сеанс", icon: "system-log-out", symbol: "󰗼", command: "hyprctl dispatch exit" },
+        { name: "Выйти", description: "Завершить текущий сеанс", category: "Сеанс", icon: "system-log-out", symbol: "󰗼", command: root.isNiri ? "niri msg action quit" : "hyprctl dispatch exit" },
         { name: "Сон", description: "Перевести компьютер в спящий режим", category: "Питание", icon: "system-suspend", symbol: "󰒲", command: "systemctl suspend" },
         { name: "Перезагрузить", description: "Перезагрузить компьютер", category: "Питание", icon: "system-reboot", symbol: "", command: "systemctl reboot" },
         { name: "Выключить", description: "Выключить компьютер", category: "Питание", icon: "system-shutdown", symbol: "", command: "systemctl poweroff" }
@@ -461,6 +462,15 @@ ShellRoot {
         return 500 - gap * 5 - text.length
     }
 
+    function launcherIconSource(result) {
+        const name = String(result.name || "").toLowerCase()
+        if (name === "telegram")
+            return "file:///usr/share/icons/Papirus/48x48/apps/telegram.svg"
+        if (name === "firefox")
+            return "file:///usr/share/icons/Papirus/48x48/apps/firefox.svg"
+        return Quickshell.iconPath(String(result.icon), "image-missing")
+    }
+
     function refreshResults(preserveSelection) {
         if (wallpaperMode) {
             refreshWallpapers()
@@ -720,6 +730,8 @@ ShellRoot {
         id: window
 
         screen: {
+            if (root.isNiri)
+                return Quickshell.screens[0]
             const monitor = Hyprland.focusedMonitor
             if (!monitor)
                 return Quickshell.screens[0]
@@ -957,18 +969,34 @@ ShellRoot {
                                     anchors.bottomMargin: root.minimum ? 5 : 8
                                     spacing: root.minimum ? 8 : 12
 
-                                Image {
+                                Item {
                                     Layout.preferredWidth: root.minimum ? 20 : 32
                                     Layout.preferredHeight: root.minimum ? 20 : 32
-                                    source: Quickshell.iconPath(
-                                        String(resultRow.modelData.icon), "image-missing")
-                                    sourceSize.width: 64
-                                    sourceSize.height: 64
-                                    fillMode: Image.PreserveAspectFit
-                                    smooth: true
-                                    mipmap: true
-                                    asynchronous: false
                                     Layout.alignment: Qt.AlignVCenter
+
+                                    // Built-in launcher actions have a stable Nerd Font
+                                    // glyph. Avoid Qt's magenta image-missing placeholder
+                                    // when an icon theme cannot resolve their legacy name.
+                                    Text {
+                                        anchors.centerIn: parent
+                                        visible: resultRow.modelData.kind === "action"
+                                        text: resultRow.modelData.symbol || "󰣇"
+                                        color: root.foreground
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pixelSize: root.minimum ? 16 : 25
+                                    }
+
+                                    Image {
+                                        anchors.fill: parent
+                                        visible: resultRow.modelData.kind !== "action"
+                                        source: root.launcherIconSource(resultRow.modelData)
+                                        sourceSize.width: 64
+                                        sourceSize.height: 64
+                                        fillMode: Image.PreserveAspectFit
+                                        smooth: true
+                                        mipmap: true
+                                        asynchronous: false
+                                    }
                                 }
 
                                 ColumnLayout {

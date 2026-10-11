@@ -41,8 +41,41 @@ case "$theme" in
   nord)
     jq -cn '{name:"nord",colors:{background:"#2e3440",surface:"#3b4252",surfaceAlt:"#434c5e",selected:"#4c566a",foreground:"#ffffff",foregroundSoft:"#eceff4",muted:"#aebaca",accent:"#8fdaec",accentHover:"#a3d5ee",critical:"#ef8290",success:"#b8d49c"}}' > "${text_palette}.tmp"
     ;;
+  rose-pine-moon)
+    jq -cn '{name:"rose-pine-moon",colors:{background:"#232136",surface:"#2a273f",surfaceAlt:"#393552",selected:"#44415a",foreground:"#e0def4",foregroundSoft:"#c4a7e7",muted:"#908caa",accent:"#c4a7e7",accentHover:"#9ccfd8",critical:"#eb6f92",success:"#9ccfd8"}}' > "${text_palette}.tmp"
+    ;;
+  everforest-dark)
+    jq -cn '{name:"everforest-dark",colors:{background:"#2b3339",surface:"#323c41",surfaceAlt:"#3a454a",selected:"#4f5b58",foreground:"#d3c6aa",foregroundSoft:"#9da9a0",muted:"#859289",accent:"#a7c080",accentHover:"#83c092",critical:"#e67e80",success:"#a7c080"}}' > "${text_palette}.tmp"
+    ;;
   *) exit 2 ;;
 esac
+mv -- "${text_palette}.tmp" "$text_palette"
+
+soften_color() {
+  local hex="${1#\#}" red green blue gray
+  [[ "$hex" =~ ^[[:xdigit:]]{6}$ ]] || exit 2
+  red=$((16#${hex:0:2}))
+  green=$((16#${hex:2:2}))
+  blue=$((16#${hex:4:2}))
+  gray=$(((red * 30 + green * 59 + blue * 11) / 100))
+  red=$(((red * 65 + gray * 35 + 50) / 100))
+  green=$(((green * 65 + gray * 35 + 50) / 100))
+  blue=$(((blue * 65 + gray * 35 + 50) / 100))
+  printf '#%02x%02x%02x\n' "$red" "$green" "$blue"
+}
+
+# Tone down the colors that draw attention. The backgrounds and text remain
+# untouched, preserving readability and each theme's intended contrast.
+for color_key in accent accentHover critical success; do
+  original_color="$(jq -r --arg key "$color_key" '.colors[$key]' "$text_palette")"
+  softened_color="$(soften_color "$original_color")"
+  jq --arg key "$color_key" --arg color "$softened_color" '.colors[$key] = $color' "$text_palette" > "${text_palette}.tmp"
+  mv -- "${text_palette}.tmp" "$text_palette"
+done
+
+# Keep terminal syntax and the prompt focused on one accent. Red is reserved
+# for errors, so a command line does not turn into a rainbow of state colors.
+jq '.colors.accentHover = .colors.accent | .colors.success = .colors.accent' "$text_palette" > "${text_palette}.tmp"
 mv -- "${text_palette}.tmp" "$text_palette"
 
 value() { jq -r --arg key "$1" '.colors[$key]' "$text_palette" | sed 's/^#//'; }

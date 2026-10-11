@@ -13,6 +13,8 @@ ShellRoot {
     id: root
 
     Theme { id: theme }
+    readonly property bool isNiri: Quickshell.env("NIRI_SOCKET").length > 0
+    property var niriWindows: []
 
     property string interfaceStyle: "modern"
     readonly property bool minimum: interfaceStyle === "minimum"
@@ -63,6 +65,8 @@ ShellRoot {
         node && node.type === PwNodeType.AudioOutStream && node.audio !== null)
 
     function windowsForScreen(screen) {
+        if (isNiri)
+            return niriWindows
         return Hyprland.toplevels.values.filter(toplevel =>
             toplevel && toplevel.wayland
                 && (!toplevel.monitor || toplevel.monitor.name === screen.name))
@@ -105,7 +109,7 @@ ShellRoot {
     }
 
     function cycleDockWindow() {
-        const windows = Hyprland.toplevels.values.filter(toplevel =>
+        const windows = isNiri ? niriWindows : Hyprland.toplevels.values.filter(toplevel =>
             toplevel && toplevel.wayland)
         if (windows.length === 0)
             return false
@@ -141,7 +145,9 @@ ShellRoot {
 
     Process {
         id: activeWindowProcess
-        command: ["bash", "-lc", "hyprctl activewindow -j | jq -r '.address // empty'"]
+        command: ["bash", "-lc", root.isNiri
+            ? "niri msg -j windows | jq -r '.[] | select(.is_focused) | .id // empty'"
+            : "hyprctl activewindow -j | jq -r '.address // empty'"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: root.activeWindowAddress = root.normalizedAddress(text.trim())
@@ -150,10 +156,41 @@ ShellRoot {
 
     Connections {
         target: Hyprland
+        enabled: !root.isNiri
 
         function onRawEvent(event) {
             if (event.name === "activewindowv2")
                 root.activeWindowAddress = root.normalizedAddress(event.data.trim())
+        }
+    }
+
+    Process {
+        id: niriWindowsProcess
+        command: ["niri", "msg", "-j", "windows"]
+        running: root.isNiri
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const windows = JSON.parse(text)
+                    root.niriWindows = windows.map(window => ({
+                        address: String(window.id),
+                        wayland: { appId: window.app_id || "" },
+                        lastIpcObject: { "class": window.app_id || "application-x-executable" }
+                    }))
+                    const focused = windows.find(window => window.is_focused)
+                    root.activeWindowAddress = focused ? String(focused.id) : ""
+                } catch (error) { root.niriWindows = [] }
+            }
+        }
+    }
+
+    Timer {
+        interval: 1000
+        running: root.isNiri
+        repeat: true
+        onTriggered: {
+            niriWindowsProcess.running = true
+            activeWindowProcess.running = true
         }
     }
 
@@ -1637,7 +1674,9 @@ ShellRoot {
                     screen.width - 48, Math.max(116, windows.length * 68 + 22))
 
                 screen: modelData
-                visible: !root.gamingMode
+                // Disable the bottom running-apps dock. The dashboard itself
+                // and the rest of Quickshell remain available.
+                visible: false
                 anchors.bottom: true
                 implicitWidth: Math.max(contentWidth, 160)
                 implicitHeight: 104

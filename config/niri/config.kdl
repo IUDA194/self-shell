@@ -1,0 +1,178 @@
+// self-shell configuration for Niri.
+// Niri uses dynamic workspaces, unlike the fixed workspace-to-monitor mapping
+// in Hyprland. Monitor modes are intentionally left to Niri's auto-detection.
+
+// Keep the physical resolution automatic. The 1440p primary display needs
+// 125% rendering so panels, applications, and text remain comfortably sized.
+output "DP-1" {
+    scale 1.25
+}
+
+// The secondary display is 1080p and stays at its native logical scale.
+output "HDMI-A-1" {
+    scale 1.0
+}
+
+// Draw focus rings around windows instead of an opaque backing surface.
+// This lets Kitty's configured transparent background show through.
+prefer-no-csd
+
+// Kitty's own background alpha is not exposed by every Wayland renderer.
+// Apply the same 84% opacity in Niri so the wallpaper is visible reliably.
+window-rule {
+    match app-id="(?i).*kitty.*"
+    opacity 0.84
+    draw-border-with-background false
+}
+
+// Let the wallpaper show through Zed just like it does through Kitty.
+window-rule {
+    match app-id="^dev\\.zed\\.Zed$"
+    opacity 0.84
+    draw-border-with-background false
+}
+
+input {
+    keyboard {
+        xkb {
+            // Ukrainian is intentionally kept out of the Mod+Space cycle.
+            // Select it from the Quickshell keyboard menu instead.
+            layout "us,ru,ua"
+        }
+        numlock
+    }
+    touchpad {
+        tap
+    }
+}
+
+// The overview remains available through Mod+O. Disable only the pointer
+// trigger in the top-left corner so it cannot open accidentally.
+gestures {
+    hot-corners {
+        off
+    }
+}
+
+layout {
+    // Match Hyprland's Minimum style: compact, gapless tiling.
+    gaps 0
+    center-focused-column "on-overflow"
+    default-column-width { proportion 0.5; }
+    focus-ring {
+        off
+    }
+    border {
+        // Match Hyprland's general:border_size and border palette.
+        width 1
+        active-color "#b58e66ee"
+        inactive-color "#4f443e99"
+    }
+}
+
+animations {
+    // Values below 1 accelerate Niri's default animations.
+    slowdown 0.65
+}
+
+// The generated include below overrides only the border colors when the
+// wallpaper palette changes.
+include optional=true "~/.cache/self-shell/niri-palette.kdl"
+
+// Match Hyprland's Minimum style: square window geometry.
+window-rule {
+    geometry-corner-radius 0
+    clip-to-geometry true
+}
+
+// The complete Quickshell suite is shared with Hyprland. The main shell
+// detects Niri and obtains workspace/layout state through `niri msg`.
+spawn-at-startup "sh" "-lc" "~/.local/bin/self-shell-wallpaper"
+spawn-at-startup "sh" "-lc" "~/.config/hypr/apply-palette.sh"
+spawn-at-startup "xwayland-satellite"
+spawn-at-startup "sh" "-lc" "~/.config/quickshell/start.sh"
+spawn-at-startup "sh" "-lc" "~/.config/hypr/clipboard-watch.sh"
+spawn-at-startup "sh" "-lc" "env QSG_RENDER_LOOP=threaded quickshell --daemonize --no-duplicate --path ~/.config/hypr/dashboard"
+spawn-at-startup "sh" "-lc" "env QSG_RENDER_LOOP=threaded quickshell --daemonize --no-duplicate --path ~/.config/hypr/launcher"
+spawn-at-startup "sh" "-lc" "~/.config/hypr/command-center-daemon.sh"
+spawn-at-startup "sh" "-lc" "~/.config/hypr/self-shell-update.sh daemon"
+spawn-at-startup "hyprsunset" "--identity"
+
+binds {
+    Mod+Shift+Slash { show-hotkey-overlay; }
+    Mod+Space { spawn-sh "~/.config/quickshell/scripts/toggle-en-ru-layout.sh"; }
+
+    Mod+Q hotkey-overlay-title="Terminal" { spawn "kitty"; }
+    Mod+R hotkey-overlay-title="Applications" { spawn-sh "~/.config/hypr/quickshell-launcher.sh"; }
+    Mod+E hotkey-overlay-title="Files" { spawn "nautilus"; }
+    Mod+Shift+L hotkey-overlay-title="Fullscreen" { fullscreen-window; }
+    Mod+W { close-window; }
+    Mod+V { toggle-window-floating; }
+    Mod+O { toggle-overview; }
+    Mod+Shift+F hotkey-overlay-title="Maximize column" { maximize-column; }
+    Mod+B hotkey-overlay-title="Clipboard" { spawn-sh "~/.config/hypr/quickshell-clipboard.sh"; }
+    Mod+Shift+B hotkey-overlay-title="Clear clipboard" { spawn-sh "~/.config/hypr/clipboard-history-clear.sh"; }
+    Mod+Shift+P hotkey-overlay-title="Passwords" { spawn-sh "~/.config/hypr/quickshell-password.sh"; }
+    Mod+T hotkey-overlay-title="Notifications" { spawn-sh "~/.config/hypr/quickshell-notifications.sh"; }
+    Mod+Tab hotkey-overlay-title="Dashboard" { spawn-sh "~/.config/hypr/dashboard-cycle-window.sh"; }
+    Mod+U hotkey-overlay-title="Wallpapers" { spawn-sh "~/.config/hypr/quickshell-launcher.sh wallpaper"; }
+
+    Shift+Left { focus-column-left; }
+    Shift+Right { focus-column-right; }
+    Shift+Up { focus-workspace-up; }
+    Shift+Down { focus-workspace-down; }
+    Mod+A { focus-column-left; }
+    Mod+F { focus-column-right; }
+    Mod+S { focus-workspace-down; }
+    Mod+D { focus-workspace-up; }
+    Ctrl+Left { move-column-left; }
+    Ctrl+Right { move-column-right; }
+    Ctrl+Up { move-window-to-workspace-up; }
+    Ctrl+Down { move-window-to-workspace-down; }
+
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+Shift+1 { move-window-to-workspace 1; }
+    Mod+Shift+2 { move-window-to-workspace 2; }
+    Mod+Shift+3 { move-window-to-workspace 3; }
+    Mod+Shift+4 { move-window-to-workspace 4; }
+    Mod+Shift+5 { move-window-to-workspace 5; }
+    Mod+Shift+6 { move-window-to-workspace 6; }
+    Mod+Shift+7 { move-window-to-workspace 7; }
+    Mod+Shift+8 { move-window-to-workspace 8; }
+    Mod+Shift+9 { move-window-to-workspace 9; }
+    Mod+Ctrl+1 { move-column-to-workspace 1; }
+    Mod+Ctrl+2 { move-column-to-workspace 2; }
+    Mod+Ctrl+3 { move-column-to-workspace 3; }
+    Mod+Ctrl+4 { move-column-to-workspace 4; }
+    Mod+Ctrl+5 { move-column-to-workspace 5; }
+    Mod+Ctrl+6 { move-column-to-workspace 6; }
+    Mod+Ctrl+7 { move-column-to-workspace 7; }
+    Mod+Ctrl+8 { move-column-to-workspace 8; }
+    Mod+Ctrl+9 { move-column-to-workspace 9; }
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp cooldown-ms=150 { focus-workspace-up; }
+
+    Mod+Shift+S { spawn-sh "grim -g \"$(slurp)\" - | tee ~/Pictures/$(date +'%Y-%m-%d_%H-%M-%S').png | wl-copy --type image/png && notify-send 'Снимок экрана' 'Скопирован в буфер обмена'"; }
+    Print { screenshot; }
+
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "-l" "1" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioMicMute allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    XF86AudioNext allow-when-locked=true { spawn "playerctl" "next"; }
+    XF86AudioPause allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioPlay allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioPrev allow-when-locked=true { spawn "playerctl" "previous"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "brightnessctl" "set" "5%+"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+
+    Mod+Shift+E { quit; }
+}

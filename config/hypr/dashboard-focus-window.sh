@@ -5,6 +5,10 @@ address="${1:-}"
 address="${address#0x}"
 [[ "$address" =~ ^[0-9a-fA-F]+$ ]] || exit 2
 
+if [[ -n "${NIRI_SOCKET:-}" ]]; then
+    exec niri msg action focus-window --id "$address"
+fi
+
 cursor="$(hyprctl cursorpos -j)"
 cursor_x="$(jq -r '.x' <<<"$cursor")"
 cursor_y="$(jq -r '.y' <<<"$cursor")"

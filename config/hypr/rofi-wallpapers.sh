@@ -13,8 +13,10 @@ readonly manifest="$cache_dir/manifest.json"
 readonly wallpaper_dir="$HOME/Documents/Wallpapers"
 readonly live_wallpaper_dir="$wallpaper_dir/live"
 readonly theme_state="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/wallpaper-themes.json"
-readonly text_theme_state="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/wallpaper-text-themes.json"
-readonly text_custom_state="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/wallpaper-text-colors.json"
+readonly text_theme_state="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/terminal-theme.json"
+readonly legacy_text_theme_state="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/wallpaper-text-themes.json"
+readonly text_custom_state="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/terminal-custom-color.json"
+readonly legacy_text_custom_state="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/wallpaper-text-colors.json"
 readonly palette_cache="$cache_dir/palettes"
 readonly active_palette="${XDG_CACHE_HOME:-$HOME/.cache}/self-shell/active-palette.json"
 readonly mpvpaper_socket="${XDG_RUNTIME_DIR:-/tmp}/self-shell-mpvpaper.sock"
@@ -33,7 +35,7 @@ theme_for_wallpaper() {
 
 set_color_mode() {
   local mode="$1" scheme="${2:-default}" state_file="${XDG_CONFIG_HOME:-$HOME/.config}/self-shell/interface-style.json" state_tmp current
-  case "$mode" in wallpaper) scheme="default" ;; fixed) case "$scheme" in default|kanagawa|gruvbox|nord|paper|solarized-light|latte|rose-dawn|dracula|tokyo-night|one-light|github-light|everforest-light|ayu-light|iceberg|monokai|custom) ;; *) return 2 ;; esac ;; *) return 2 ;; esac
+  case "$mode" in wallpaper) scheme="default" ;; fixed) case "$scheme" in default|kanagawa|gruvbox|nord|paper|solarized-light|latte|rose-dawn|rose-pine-moon|dracula|tokyo-night|one-light|github-light|everforest-light|everforest-dark|ayu-light|iceberg|monokai|custom) ;; *) return 2 ;; esac ;; *) return 2 ;; esac
   mkdir -p "${state_file%/*}"
   state_tmp="$(mktemp "${state_file%/*}/interface-style.XXXXXX")"
   if [[ -s "$state_file" ]]; then
@@ -63,13 +65,26 @@ set_custom_interface_color() {
 
 text_theme_for_wallpaper() {
   local path="$1"
-  [[ -s "$text_theme_state" ]] || { printf 'obsidian\n'; return; }
-  jq -r --arg path "$path" '.[$path] // "obsidian"' "$text_theme_state" 2>/dev/null || printf 'obsidian\n'
+  if [[ -s "$text_theme_state" ]]; then
+    jq -r '.theme // "obsidian"' "$text_theme_state" 2>/dev/null || printf 'obsidian\n'
+    return
+  fi
+  # Preserve the currently selected legacy theme during the one-time move
+  # from wallpaper-specific text themes to a single terminal theme.
+  if [[ -s "$legacy_text_theme_state" ]]; then
+    jq -r --arg path "$path" '.[$path] // "obsidian"' "$legacy_text_theme_state" 2>/dev/null || printf 'obsidian\n'
+    return
+  fi
+  printf 'obsidian\n'
 }
 
 text_custom_color_for_wallpaper() {
   local path="$1"
-  jq -r --arg path "$path" '.[$path] // "#b58e66"' "$text_custom_state" 2>/dev/null || printf '#b58e66\n'
+  if [[ -s "$text_custom_state" ]]; then
+    jq -r '.color // "#b58e66"' "$text_custom_state" 2>/dev/null || printf '#b58e66\n'
+    return
+  fi
+  jq -r --arg path "$path" '.[$path] // "#b58e66"' "$legacy_text_custom_state" 2>/dev/null || printf '#b58e66\n'
 }
 
 hsl_color() {
@@ -80,11 +95,31 @@ hsl_color() {
   printf '#%s\n' "${result:0:6}"
 }
 
+soften_color() {
+  local hex="${1#\#}" red green blue gray
+  [[ "$hex" =~ ^[[:xdigit:]]{6}$ ]] || return 2
+  red=$((16#${hex:0:2}))
+  green=$((16#${hex:2:2}))
+  blue=$((16#${hex:4:2}))
+  # Mix 35% neutral gray into accents. This preserves each palette's hue,
+  # while avoiding neon-looking controls and status colors.
+  gray=$(((red * 30 + green * 59 + blue * 11) / 100))
+  red=$(((red * 65 + gray * 35 + 50) / 100))
+  green=$(((green * 65 + gray * 35 + 50) / 100))
+  blue=$(((blue * 65 + gray * 35 + 50) / 100))
+  printf '#%02x%02x%02x\n' "$red" "$green" "$blue"
+}
+
 write_palette() {
   local name="$1" background="$2" surface="$3" surface_alt="$4" selected="$5"
   local foreground="$6" foreground_soft="$7" muted="$8" accent="$9"
   local accent_hover="${10}" accent_foreground="${11}" critical="${12}" success="${13}"
   local outline="#b8${selected#\#}" scrim='#b3000000'
+  accent="$(soften_color "$accent")"
+  critical="$(soften_color "$critical")"
+  # One accent across normal UI states keeps the interface visually quiet.
+  accent_hover="$accent"
+  success="$accent"
   jq -cn --arg name "$name" --arg background "$background" --arg surface "$surface" \
     --arg surfaceAlt "$surface_alt" --arg selected "$selected" --arg foreground "$foreground" \
     --arg foregroundSoft "$foreground_soft" --arg muted "$muted" --arg accent "$accent" \
@@ -132,6 +167,9 @@ palette_for_theme() {
     rose-dawn)
       write_palette rose-dawn '#faf4ed' '#fffaf3' '#f2e9e1' '#dfdad9' '#575279' '#6e6a86' '#9893a5' '#907aa9' '#7f669c' '#ffffff' '#b4637a' '#56949f'
       ;;
+    rose-pine-moon)
+      write_palette rose-pine-moon '#232136' '#2a273f' '#393552' '#44415a' '#e0def4' '#c4a7e7' '#908caa' '#c4a7e7' '#9ccfd8' '#232136' '#eb6f92' '#9ccfd8'
+      ;;
     dracula)
       write_palette dracula '#282a36' '#343746' '#44475a' '#565a70' '#f8f8f2' '#dedee8' '#8b90a7' '#bd93f9' '#caa8ff' '#282a36' '#ff5555' '#50fa7b'
       ;;
@@ -147,6 +185,9 @@ palette_for_theme() {
     everforest-light)
       write_palette everforest-light '#fdf6e3' '#f4f0d9' '#e8e5d5' '#e0e4c1' '#5c6a72' '#6f7b80' '#939f91' '#8da101' '#7a8c00' '#ffffff' '#f85552' '#35a77c'
       ;;
+    everforest-dark)
+      write_palette everforest-dark '#2b3339' '#323c41' '#3a454a' '#4f5b58' '#d3c6aa' '#9da9a0' '#859289' '#a7c080' '#83c092' '#2b3339' '#e67e80' '#a7c080'
+      ;;
     ayu-light)
       write_palette ayu-light '#fafafa' '#f3f4f5' '#e7e8e9' '#fff0dc' '#5c6166' '#6c737a' '#92989d' '#ff9940' '#e67e22' '#332b22' '#f07171' '#86b300'
       ;;
@@ -160,7 +201,7 @@ palette_for_theme() {
       mkdir -p "$palette_cache"
       # Keep the algorithm version in the key so palette fixes also refresh
       # already generated video thumbnails.
-      key="$(printf 'v3:%s:%s' "$source" "$(stat -c %Y "$source" 2>/dev/null || printf 0)" | sha256sum | cut -d' ' -f1)"
+      key="$(printf 'v4:%s:%s' "$source" "$(stat -c %Y "$source" 2>/dev/null || printf 0)" | sha256sum | cut -d' ' -f1)"
       cache_file="$palette_cache/$key.json"
       if [[ ! -s "$cache_file" ]]; then
         base="$(magick "${source}[0]" -auto-orient -resize 1x1! -colorspace sRGB \
@@ -207,7 +248,7 @@ activate_palette() {
 
 set_wallpaper_theme() {
   local path="$1" theme="$2" state_tmp current
-  case "$theme" in auto|default|kanagawa|gruvbox|nord|paper|solarized-light|latte|rose-dawn|dracula|tokyo-night|one-light|github-light|everforest-light|ayu-light|iceberg|monokai) ;; *) return 2 ;; esac
+  case "$theme" in auto|default|kanagawa|gruvbox|nord|paper|solarized-light|latte|rose-dawn|rose-pine-moon|dracula|tokyo-night|one-light|github-light|everforest-light|everforest-dark|ayu-light|iceberg|monokai) ;; *) return 2 ;; esac
   mkdir -p "$(dirname "$theme_state")"
   state_tmp="$(mktemp "${theme_state}.XXXXXX")"
   if [[ -s "$theme_state" ]]; then
@@ -225,14 +266,10 @@ set_wallpaper_theme() {
 
 set_wallpaper_text_theme() {
   local path="$1" text_theme="$2" state_tmp current
-  case "$text_theme" in auto|obsidian|kanagawa|gruvbox|nord|custom) ;; *) return 2 ;; esac
+  case "$text_theme" in auto|obsidian|kanagawa|gruvbox|nord|rose-pine-moon|everforest-dark|custom) ;; *) return 2 ;; esac
   mkdir -p "$(dirname "$text_theme_state")"
   state_tmp="$(mktemp "${text_theme_state}.XXXXXX")"
-  if [[ -s "$text_theme_state" ]]; then
-    jq --arg path "$path" --arg theme "$text_theme" '.[$path] = $theme' "$text_theme_state" > "$state_tmp"
-  else
-    jq -cn --arg path "$path" --arg theme "$text_theme" '{($path):$theme}' > "$state_tmp"
-  fi
+  jq -cn --arg theme "$text_theme" '{theme:$theme}' > "$state_tmp"
   mv -- "$state_tmp" "$text_theme_state"
   current="$(awk -F' = ' '$1 == "wallpaper" { print $2; exit }' "$HOME/.config/waypaper/config.ini" 2>/dev/null || true)"
   if [[ "$current" == "$path" ]]; then
@@ -245,11 +282,7 @@ set_custom_text_color() {
   [[ "$color" =~ ^#[[:xdigit:]]{6}$ ]] || return 2
   mkdir -p "${text_custom_state%/*}"
   state_tmp="$(mktemp "${text_custom_state}.XXXXXX")"
-  if [[ -s "$text_custom_state" ]]; then
-    jq --arg path "$path" --arg color "$color" '.[$path]=$color' "$text_custom_state" > "$state_tmp"
-  else
-    jq -cn --arg path "$path" --arg color "$color" '{($path):$color}' > "$state_tmp"
-  fi
+  jq -cn --arg color "$color" '{color:$color}' > "$state_tmp"
   mv -- "$state_tmp" "$text_custom_state"
   set_wallpaper_text_theme "$path" custom
   build_manifest

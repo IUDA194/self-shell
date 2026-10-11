@@ -24,34 +24,22 @@ for value in "$accent" "$accent_hover" "$foreground" "$foreground_soft" \
 done
 
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/self-shell"
-tmux_theme="$cache_dir/tmux-theme.conf"
+niri_palette="$cache_dir/niri-palette.kdl"
 mkdir -p "$cache_dir"
-tmux_theme_tmp="$(mktemp "${tmux_theme}.XXXXXX")"
-cat > "$tmux_theme_tmp" <<EOF
-# Generated from the active wallpaper palette. Do not edit.
-set -g status-style "bg=default,fg=#$foreground"
-set -g message-style "bg=default,fg=#$foreground"
-set -g message-command-style "bg=default,fg=#$foreground"
-set -g pane-border-style "fg=#$surface_alt"
-set -g pane-active-border-style "fg=#$accent"
-set -g window-status-style "fg=#$muted,bg=default"
-set -g window-status-current-style "fg=#$accent,bg=default,bold"
-set -g window-status-activity-style "fg=#$accent_hover,bg=default,bold"
-set -g window-status-bell-style "fg=#$accent_hover,bg=default,bold"
-set -g window-status-format "#[fg=#$muted,bg=default] #I:#W "
-set -g window-status-current-format "#[fg=#$accent,bg=default,bold] #I:#W "
-set -g status-left-style "fg=#$accent,bg=default"
-set -g status-right-style "fg=#$foreground_soft,bg=default"
-set -g status-left '#[fg=#$accent,bold] #S '
-set -g status-right '#(~/.local/bin/tmux-state-save >/dev/null 2>&1)#[fg=#$foreground_soft]%Y-%m-%d #[fg=#$surface_alt]| #[fg=#$foreground,bold]%H:%M '
-set -g mode-style "bg=#$surface,fg=#$foreground"
-set -g clock-mode-colour "#$accent"
-EOF
-mv -- "$tmux_theme_tmp" "$tmux_theme"
 
-if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
-  tmux source-file "$tmux_theme"
-fi
+# Niri reads this included file and reloads it automatically. Keep the
+# border colors in sync with the wallpaper palette used by Hyprland and
+# Quickshell.
+niri_palette_tmp="$(mktemp "${niri_palette}.XXXXXX")"
+printf '%s\n' \
+  '// Generated from the active wallpaper palette. Do not edit.' \
+  'layout {' \
+  '    border {' \
+  "        active-color \"#${accent}ee\"" \
+  "        inactive-color \"#${surface_alt}99\"" \
+  '    }' \
+  '}' > "$niri_palette_tmp"
+mv -- "$niri_palette_tmp" "$niri_palette"
 
 # Hyprland expects RRGGBBAA in rgba(). Border transitions use its native
 # `animation = border`, so they stay in sync with the Quickshell palette fade.
