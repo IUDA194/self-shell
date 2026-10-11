@@ -27,7 +27,7 @@ remove_managed_link() {
 }
 
 log 'Removing self-shell configuration links'
-for name in fish kitty tmux nvim fastfetch btop quickshell hypr waypaper; do
+for name in fish kitty tmux nvim fastfetch btop quickshell hypr niri waypaper; do
   remove_managed_link "$HOME/.config/$name" "$repo_dir/config/$name"
 done
 
@@ -53,6 +53,6 @@ remove_managed_link \
   "$repo_dir/assets/wallpapers/wallpeper.jpg"
 
 printf '\nDone. Removed %d managed link(s).\n' "$removed"
-printf '%s\n' 'Removing ~/.config/hypr also removes the self-shell Quickshell autostart entries.'
+printf '%s\n' 'Removing ~/.config/hypr or ~/.config/niri also removes the respective self-shell session setup.'
 printf '%s\n' 'System packages, login shell, Nautilus settings, MIME defaults, fonts,' \
   'icons, GTK settings, tmux plugins, awww, mpvpaper, and the calendar environment were left unchanged.'

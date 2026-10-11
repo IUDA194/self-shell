@@ -38,7 +38,7 @@ install_fedora_packages() {
     python3 python3-pip qt6-qtimageformats qt6-qtmultimedia qt6-qtsvg qt6-qtvirtualkeyboard
     ripgrep rofi scdoc sddm slurp sqlite tesseract tesseract-langpack-eng
     tesseract-langpack-rus tmux wayland-devel
-    wayland-protocols-devel wf-recorder wireplumber wl-clipboard wtype xdg-utils
+    wayland-protocols-devel wf-recorder wireplumber wl-clipboard wtype xdg-utils xwayland-satellite
     xz zoxide
   )
 
@@ -82,7 +82,7 @@ install_arch_packages() {
     neovim ninja pass plocate playerctl python ripgrep rofi sddm slurp sqlite tesseract
     tesseract-data-eng tesseract-data-rus tmux
     qt6-imageformats qt6-multimedia qt6-svg qt6-virtualkeyboard
-    wf-recorder wireplumber wl-clipboard wtype xdg-utils xz zoxide quickshell
+    wf-recorder wireplumber wl-clipboard wtype xdg-utils xwayland-satellite xz zoxide quickshell
   )
   sudo pacman -S --needed --noconfirm "${packages[@]}"
 }

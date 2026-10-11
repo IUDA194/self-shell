@@ -19,6 +19,8 @@ bash -c 'set -e; if ! command -v git >/dev/null; then if command -v dnf >/dev/nu
 Установщик по умолчанию:
 
 - ставит системные зависимости через DNF или pacman;
+- устанавливает Hyprland, Niri и `xwayland-satellite`, нужный для запуска
+  X11-приложений в сессии Niri;
 - на Fedora собирает `awww` 0.12.1 из официального репозитория Codeberg;
 - на Fedora 44+ устанавливает Quickshell из штатного репозитория, а на Fedora 43
   автоматически подключает рекомендованный `errornointernet/quickshell` COPR;
@@ -73,6 +75,8 @@ SELF_SHELL_OFFLINE=1 SELF_SHELL_SKIP_PACKAGES=1 ./install.sh
 - `config/hypr` — полный Hyprland-конфиг и все дополнительные Quickshell
   экраны/backend-скрипты;
 - `config/niri` — конфигурация Niri с Quickshell, общими обоями и хоткеями;
+  использует общие скрипты из `config/hypr`, поэтому оба каталога подключаются
+  установщиком;
 - `config/quickshell` — панель, центр и toast-уведомления, power menu и
   сетевые скрипты;
 - `config/tmux` и `home/.tmux.conf` — tmux вместе с автозапуском Fish;
