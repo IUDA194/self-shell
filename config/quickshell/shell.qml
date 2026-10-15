@@ -199,6 +199,12 @@ ShellRoot {
     IpcHandler {
         target: "panel"
 
+        function ai(): void {
+            root.connectivityPage = "ai"
+            root.connectivityMenuScreen = null
+            root.connectivityMenuOpen = true
+        }
+
         function refreshKeyboardLayout(): void {
             layoutProcess.running = true
         }
@@ -653,6 +659,21 @@ ShellRoot {
                     }
 
                     BarButton {
+                        text: "󰚩"
+                        tooltip: "Лимиты AI"
+                        active: root.connectivityMenuOpen && root.connectivityPage === "ai"
+                        onClicked: {
+                            if (root.connectivityMenuOpen && root.connectivityPage === "ai") {
+                                connectivityPanel.close()
+                                return
+                            }
+                            root.connectivityPage = "ai"
+                            root.connectivityMenuScreen = panel.screen
+                            root.connectivityMenuOpen = true
+                        }
+                    }
+
+                    BarButton {
                         text: Networking.wifiEnabled ? "" : "󰤮"
                         color: Networking.wifiEnabled ? root.foreground : root.accent
                         tooltip: Networking.wifiEnabled ? "Wi-Fi включён" : "Wi-Fi выключен"
@@ -821,6 +842,23 @@ ShellRoot {
                             root.connectivityPage = "keyboard"
                             root.connectivityMenuScreen = topPanel.screen
                             root.connectivityMenuOpen = true
+                        }
+                    }
+                }
+                Text {
+                    text: "󰚩"
+                    color: root.foreground
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 11
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -7
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            const wasOpen = root.connectivityMenuOpen && root.connectivityPage === "ai"
+                            root.connectivityPage = "ai"
+                            root.connectivityMenuScreen = topPanel.screen
+                            root.connectivityMenuOpen = !wasOpen
                         }
                     }
                 }

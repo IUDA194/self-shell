@@ -43,6 +43,7 @@ ShellRoot {
     property var results: []
     property var launchHistory: ({})
     readonly property var launcherActions: [
+        { name: "Лимиты AI", description: "!ai — открыть лимиты на панели", keywords: "ai agents codex gemini claude opencode лимиты агенты", category: "AI", icon: "applications-development", symbol: "󰚩", mode: "", command: "quickshell ipc call panel ai" },
         { name: "Обои", description: "!wallpaper — выбрать обои", keywords: "wallpaper wall walls обои", category: "Оформление", icon: "preferences-desktop-wallpaper", symbol: "󰸉", mode: "wallpaper", command: "" },
         { name: "Настройки", description: "!settings · !настройки — внешний вид и темы", keywords: "settings настройки appearance theme оформление тема", category: "Оформление", icon: "preferences-system", symbol: "󰒓", mode: "settings", command: Quickshell.env("HOME") + "/.config/hypr/settings.sh" },
         { name: "Уведомления", description: "!notifications — последние события", keywords: "notifications notification notif уведомления уведомление увед", category: "Уведомления", icon: "preferences-system-notifications", symbol: "󰂚", mode: "notifications", command: "" },

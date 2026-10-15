@@ -14,6 +14,26 @@ Item {
 
     Theme { id: theme }
 
+    property var aiRows: []
+    function refreshAi() {
+        if (!aiProcess.running) aiProcess.running = true
+    }
+    Process {
+        id: aiProcess
+        command: ["python3", Quickshell.env("HOME") + "/.config/hypr/launcher/ai-limits.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { window.aiRows = JSON.parse(text) }
+                catch (error) { window.aiRows = [{ name: "Лимиты недоступны", description: "Ошибка чтения данных" }] }
+            }
+        }
+    }
+    Timer {
+        interval: 30000
+        running: window.visible && window.page === "ai"
+        repeat: true
+        onTriggered: window.refreshAi()
+    }
     property string page: "wifi"
     property real railWidth: 55
     property bool fromTop: false
@@ -93,6 +113,8 @@ Item {
             revealProgress = 1
             if (window.page === "wifi")
                 window.refreshNetworks()
+            if (window.page === "ai")
+                window.refreshAi()
         })
     }
 
@@ -121,6 +143,8 @@ Item {
             window.contentOpacity = 1
             if (window.page === "wifi")
                 window.refreshNetworks()
+            if (window.page === "ai")
+                window.refreshAi()
         }
     }
 
@@ -213,7 +237,7 @@ Item {
             readonly property real fullHeight: content.implicitHeight + (window.page === "keyboard" ? 24 : 40)
             readonly property real closeProgress: window.closing ? window.revealProgress : 1
             // Each surface is centred exactly on its corresponding rail button.
-            readonly property real buttonCenterFromBottom: window.page === "keyboard" ? 158 : (window.page === "wifi" ? 126 : (window.page === "bluetooth" ? 94 : 30))
+            readonly property real buttonCenterFromBottom: window.page === "ai" ? 158 : window.page === "keyboard" ? 190 : (window.page === "wifi" ? 126 : (window.page === "bluetooth" ? 94 : 30))
             // Prefer button alignment, but lift tall surfaces enough to keep
             // their complete content inside the screen.
             readonly property real baseBottomMargin: Math.max(28, buttonCenterFromBottom - fullHeight / 2)
@@ -268,6 +292,80 @@ Item {
                 anchors.topMargin: window.page === "keyboard" ? 12 : 20
                 width: card.fullWidth - (window.page === "keyboard" ? 24 : 40)
                 spacing: 12
+
+                ColumnLayout {
+                    visible: window.passwordSsid.length === 0 && window.displayedPage === "ai"
+                    opacity: window.contentOpacity
+                    Layout.fillWidth: true
+                    spacing: 12
+                    SectionTitle { title: "Лимиты AI" }
+                    Text {
+                        text: "Осталось доступно"
+                        color: theme.muted
+                        font.pixelSize: 11
+                    }
+                    Text {
+                        visible: window.aiRows.length === 0
+                        text: "Загрузка…"
+                        color: theme.muted
+                        font.pixelSize: 12
+                    }
+                    Repeater {
+                        model: window.aiRows
+                        delegate: ColumnLayout {
+                            id: quotaRow
+                            required property var modelData
+                            readonly property bool hasQuota: modelData.remaining !== undefined && modelData.remaining !== null
+                            Layout.fillWidth: true
+                            spacing: 7
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: quotaRow.modelData.name
+                                    textFormat: Text.PlainText
+                                    wrapMode: Text.Wrap
+                                    color: theme.foregroundSoft
+                                    font.family: "JetBrainsMono Nerd Font"
+                                    font.pixelSize: 12
+                                }
+                                Text {
+                                    text: quotaRow.hasQuota ? quotaRow.modelData.remaining + "%" : "Нет свежих данных"
+                                    color: quotaRow.hasQuota ? theme.accent : theme.muted
+                                    font.family: "JetBrainsMono Nerd Font"
+                                    font.pixelSize: 12
+                                }
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 8
+                                visible: quotaRow.hasQuota
+                                radius: 4
+                                color: theme.surface
+                                Rectangle {
+                                    width: parent.width * (quotaRow.hasQuota ? quotaRow.modelData.remaining / 100 : 0)
+                                    height: parent.height
+                                    radius: 4
+                                    color: quotaRow.modelData.remaining <= 15 ? theme.critical : theme.accent
+                                    Behavior on width { NumberAnimation { duration: 220 } }
+                                }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: modelData.description
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                                color: theme.muted
+                                font.pixelSize: 11
+                            }
+                        }
+                    }
+                    ActionButton {
+                        text: aiProcess.running ? "Обновление…" : "Обновить"
+                        busy: aiProcess.running
+                        onClicked: window.refreshAi()
+                    }
+                }
 
                 ColumnLayout {
                     visible: window.passwordSsid.length === 0 && window.displayedPage === "wifi"
